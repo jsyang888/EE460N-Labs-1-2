@@ -7,6 +7,31 @@
 FILE* infile = NULL;
 FILE* outfile = NULL;
 
+
+int readAndParse(
+    FILE *pInfile,
+    char *pLine,
+    char **pLabel,
+    char **pOpcode,
+    char **pArg1,
+    char **pArg2,
+    char **pArg3,
+    char **pArg4
+);
+
+int parseNumber(const char *text, int *result);
+int isOpcode(char *opcode);
+int insert_symbol(const char *name, int address);
+int find_symbol(const char *name);
+
+//function prototype definitions
+
+#define MAX_LINE_LENGTH 255
+	enum
+	{
+	   DONE, OK, EMPTY_LINE
+	};
+
 int main(int argc, char* argv[]) {
     /* open the source file */
     infile = fopen(argv[1], "r");
@@ -20,26 +45,102 @@ int main(int argc, char* argv[]) {
        printf("Error: Cannot open file %s\n", argv[2]);
        exit(4);
     }
+    char line[MAX_LINE_LENGTH];
 
+    char *label;
+    char *opcode;
+    char *arg1;
+    char *arg2;
+    char *arg3;
+    char *arg4;
+
+    int status;
+    int locationCounter = 0;
+    int originFound = 0; //check if there's an origin before code
+    int endFound = 0;
     /* Do stuff with files */
+    // first pass with assigning symbols
+    while ((status = readAndParse(infile, line, &label, &opcode, &arg1, &arg2, &arg3, &arg4)) != DONE) {
+        if (status == EMPTY_LINE) {
+            continue; // ignore the blanks
+        }
+        if (strcmp(opcode, ".orig") == 0) {
+            int origin;
+            if (!parseNumber(arg1, &origin)) // invalid number
+            {
+                exit(1);
+            }
 
+            if (origin < 0 || origin > 0xFFFF) // out of range
+            {
+                exit(1);
+            }
+
+            if (origin % 2 != 0) // not even
+            {
+                exit(1);
+            }
+
+            locationCounter = origin;
+            originFound = 1;
+            
+            continue;
+        }
+
+        if (!originFound) {
+            exit(1); // no origin found
+        }
+
+        if (strcmp(opcode, ".end") == 0) {
+            endFound = 1;
+            break;
+        }
+        // now, check for a label
+        if (label[0] != '\0') {
+            if (insert_symbol(label, locationCounter) == -1) {
+                return(1); // error when adding to symbol table
+            }
+
+        }
+        if (opcode[0] == '\0') {
+            continue; // possible for a line to just have a label, but nothing else so just continue
+        }
+
+        if (isOpcode(opcode) != -1) {
+            if (locationCounter > 0xFFFE) {
+                return(1);
+            }
+            locationCounter += 2;
+        }
+
+        if (strcmp(opcode, ".fill") == 0) {
+            //fill line command
+            int value;
+
+            if (!parseNumber(arg1, &value)) {
+                return(1); // not a valid fill value
+            }
+            if (value < -32768 || value > 32767) {
+                return (1); // out of bounds
+            }
+            if (locationCounter > 0xFFFE) {
+                return (1); // idk how but the user manages to put the fill command out of memory
+            }
+            locationCounter +=2; // increment
+        }
+    }    
     fclose(infile);
     fclose(outfile);
 }
 
-#define MAX_LINE_LENGTH 255
-	enum
-	{
-	   DONE, OK, EMPTY_LINE
-	};
 
 int readAndParse(
-    FILE *pInfile,
-    char *pLine,
-    char **pLabel,
-    char **pOpcode,
-    char **pArg1,
-    char **pArg2,
+    FILE *pInfile, // pointer for in file
+    char *pLine, // pointer for what line we are on
+    char **pLabel, //pointer for the label, if it exists
+    char **pOpcode, //pointer for the op code
+    char **pArg1, 
+    char **pArg2, 
     char **pArg3,
     char **pArg4
     ) 
@@ -68,7 +169,7 @@ int readAndParse(
 	   if( isOpcode( lPtr ) == -1 && lPtr[0] != '.' ) /* found a label */
 	   {
 		*pLabel = lPtr;
-		if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
+	    if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
 	   }
 	   
            *pOpcode = lPtr;
@@ -143,3 +244,10 @@ int find_symbol(const char* name) {
 
 }
 
+int assign_symbols(char **pLabel, int address) {
+    if (*pLabel == NULL) return -1;
+    if (insert_symbol(*pLabel, address) == -1) {
+        return -1; // threw some sort of error while 
+    }
+    return 0;
+}
