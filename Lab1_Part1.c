@@ -19,10 +19,10 @@ int readAndParse(
     char **pArg4
 );
 
-int parseNumber(const char *text, int *result);
+int toNum(const char *text, int *result); //Converts string to number
 int isOpcode(char *opcode);
-int insert_symbol(const char *name, int address);
-int find_symbol(const char *name);
+int insert_symbol(const char *name, int address); //Inserts symbol into symbol table; returns -1 if table already contains symbol or if table is full
+int find_symbol(const char *name); //Searches for symbol in symbol table; returns address of symbol, -1 if not found
 
 //function prototype definitions
 
@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
        printf("Error: Cannot open file %s\n", argv[2]);
        exit(4);
     }
+
     char line[MAX_LINE_LENGTH];
 
     char *label;
@@ -58,7 +59,9 @@ int main(int argc, char* argv[]) {
     int locationCounter = 0;
     int originFound = 0; //check if there's an origin before code
     int endFound = 0;
+
     /* Do stuff with files */
+
     // first pass with assigning symbols
     while ((status = readAndParse(infile, line, &label, &opcode, &arg1, &arg2, &arg3, &arg4)) != DONE) {
         if (status == EMPTY_LINE) {
@@ -129,6 +132,9 @@ int main(int argc, char* argv[]) {
             locationCounter +=2; // increment
         }
     }    
+
+	/* Done doing stuff with files */
+
     fclose(infile);
     fclose(outfile);
 }
@@ -208,6 +214,72 @@ typedef struct {
 
 Symbol table[TABLE_SIZE]; // initial size, maybe add feature to increase size if running out? idk ignore if we pass all tests
 int symbol_count = 0;
+
+int toNum( char * pStr )
+{
+   char * t_ptr;
+   char * orig_pStr;
+   int t_length,k;
+   int lNum, lNeg = 0;
+   long int lNumLong;
+
+   orig_pStr = pStr;
+   if( *pStr == '#' )				/* decimal */
+   { 
+     pStr++;
+     if( *pStr == '-' )				/* dec is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isdigit(*t_ptr))
+       {
+	 printf("Error: invalid decimal operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNum = atoi(pStr);
+     if (lNeg)
+       lNum = -lNum;
+ 
+     return lNum;
+   }
+   else if( *pStr == 'x' )	/* hex     */
+   {
+     pStr++;
+     if( *pStr == '-' )				/* hex is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isxdigit(*t_ptr))
+       {
+	 printf("Error: invalid hex operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNumLong = strtol(pStr, NULL, 16);    /* convert hex string into integer */
+     lNum = (lNumLong > INT_MAX)? INT_MAX : lNumLong;
+     if( lNeg )
+       lNum = -lNum;
+     return lNum;
+   }
+   else
+   {
+	printf( "Error: invalid operand, %s\n", orig_pStr);
+	exit(4);  /* This has been changed from error code 3 to error code 4, see clarification 12 */
+   }
+}
 
 int insert_symbol(const char* name, int address) { 
     // check if name is too long first
