@@ -19,7 +19,7 @@ int readAndParse(
     char **pArg4
 );
 
-int toNum(const char *text, int *result); //Converts string to number
+int toNum(char *pStr); //Converts string to number
 int isOpcode(char *opcode);
 int insert_symbol(const char *name, int address); //Inserts symbol into symbol table; returns -1 if table already contains symbol or if table is full
 int find_symbol(const char *name); //Searches for symbol in symbol table; returns address of symbol, -1 if not found
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(opcode, ".orig") == 0) {
             int origin;
-            if (!parseNumber(arg1, &origin)) // invalid number
+            if (!toNum(arg1)) // invalid number
             {
                 exit(1);
             }
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
             //fill line command
             int value;
 
-            if (!parseNumber(arg1, &value)) {
+            if (!toNum(arg1)) {
                 return(1); // not a valid fill value
             }
             if (value < -32768 || value > 32767) {
@@ -215,7 +215,7 @@ typedef struct {
 Symbol table[TABLE_SIZE]; // initial size, maybe add feature to increase size if running out? idk ignore if we pass all tests
 int symbol_count = 0;
 
-int toNum( char * pStr )
+int toNum(char * pStr)
 {
    char * t_ptr;
    char * orig_pStr;
@@ -322,4 +322,14 @@ int assign_symbols(char **pLabel, int address) {
         return -1; // threw some sort of error while 
     }
     return 0;
+}
+
+int isOpcode(char *opcode) {
+    char* opcodes[] = {"add, and, br, brn, brz, brp, brnz, brnp, brzp, brnzp, halt, jmp, jsr, jsrr, ldb, ldw, lea, nop, not, ret, lshf, rshfl, rshfa, rti, stb, stw, trap, xor"};
+    for (int i = 0; i < sizeof(opcodes) / sizeof(char*); i++) {
+        if (strcmp(opcodes[i], opcode) == 0) {
+            return 0;
+        }
+    }
+    return -1;
 }
