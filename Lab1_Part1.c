@@ -74,6 +74,8 @@ int main(int argc, char* argv[]) {
                 exit(1);
             }
 
+			origin = toNum(arg1);
+
             if (origin < 0 || origin > 0xFFFF) // out of range
             {
                 exit(1);
@@ -98,6 +100,7 @@ int main(int argc, char* argv[]) {
             endFound = 1;
             break;
         }
+
         // now, check for a label
         if (label[0] != '\0') {
             if (insert_symbol(label, locationCounter) == -1) {
@@ -123,6 +126,9 @@ int main(int argc, char* argv[]) {
             if (!toNum(arg1)) {
                 return(1); // not a valid fill value
             }
+
+			value = toNum(arg1);
+
             if (value < -32768 || value > 32767) {
                 return (1); // out of bounds
             }
