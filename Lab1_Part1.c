@@ -298,7 +298,7 @@ int insert_symbol(const char* name, int address) {
         strcpy (checked_name, name);
     }
     
-    for (int i = 0; i < TABLE_SIZE; i++) {
+    for (int i = 0; i < symbol_count; i++) {
         if (strcmp(table[i].name, checked_name) == 0) {
             return -1; //that means this symbol already exists in the table, can't have dupes
         } 
