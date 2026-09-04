@@ -20,7 +20,7 @@ int readAndParse(
 );
 
 int toNum(char *pStr); //Converts string to number
-int isOpcode(char *opcode);
+int isOpcode(char *opcode); //Determines if string is opcode; returns 0 if opcode, -1 if not opcode
 int insert_symbol(const char *name, int address); //Inserts symbol into symbol table; returns -1 if table already contains symbol or if table is full
 int find_symbol(const char *name); //Searches for symbol in symbol table; returns address of symbol, -1 if not found
 
