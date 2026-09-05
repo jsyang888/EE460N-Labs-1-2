@@ -578,6 +578,15 @@ int isOpcode(char *opcode) {
         "stb", "stw", "trap", "xor"
     };
 
+	int opcodeNums[] = {
+		1<<12, 5<<12, 7<<9, 4<<9, 2<<9, 1<<9,
+		6<<9, 5<<9, 3<<9, 7<<9,
+		0xF025, 96<<9, 9<<11, 32<<9,
+		2<<12, 6<<12, 14<<12, 0, 9<<12, 0xC1C0,
+		13<<12, 13<<12, 13<<12, 0x8000,
+		3<<12, 7<<12, 0xF0<<8, 9<<12
+	};
+
     for (int i = 0; i < sizeof(opcodes) / sizeof(char*); i++) {
         if (strcmp(opcodes[i], opcode) == 0) {
             //fprintf(stderr, "success!\n");
