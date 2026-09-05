@@ -23,7 +23,7 @@ int toNum(char *pStr); //Converts string to number
 int isOpcode(char *opcode); //Determines if string is opcode; returns 0 if opcode, -1 if not opcode
 int insert_symbol(const char *name, int address); //Inserts symbol into symbol table; returns -1 if table already contains symbol or if table is full
 int find_symbol(const char *name); //Searches for symbol in symbol table; returns address of symbol, -1 if not found
-
+void write_symbol_table(FILE *out); // test function so we can see the symbol table generated.
 //function prototype definitions
 
 #define MAX_LINE_LENGTH 255
@@ -31,6 +31,18 @@ int find_symbol(const char *name); //Searches for symbol in symbol table; return
 	{
 	   DONE, OK, EMPTY_LINE
 	};
+
+// Symbol Table Stuff
+typedef struct {
+    char name[21]; // each name has a max of 20 characters + null terminator
+    int address; // for what mem address it's at
+    int define_check; // if it's been defined yet 
+} Symbol;
+
+#define TABLE_SIZE 1024
+
+Symbol table[TABLE_SIZE]; // initial size, maybe add feature to increase size if running out? idk ignore if we pass all tests
+int symbol_count = 0;
 
 int main(int argc, char* argv[]) {
     /* open the source file */
@@ -98,12 +110,13 @@ int main(int argc, char* argv[]) {
 
         if (strcmp(opcode, ".end") == 0) {
             endFound = 1;
-            break;
+            continue;
         }
 
         // now, check for a label
         if (label[0] != '\0') {
             if (insert_symbol(label, locationCounter) == -1) {
+                fprintf(stderr, "Error when adding to symbol table:%s %d", label, locationCounter);
                 return(1); // error when adding to symbol table
             }
 
@@ -124,21 +137,25 @@ int main(int argc, char* argv[]) {
             int value;
 
             if (!toNum(arg1)) {
+                fprintf(stderr, "Not a valid fill value: .fill %s", arg1);
                 return(1); // not a valid fill value
             }
 
 			value = toNum(arg1);
 
-            if (value < -32768 || value > 32767) {
+            if (value < -32768 || value > 0xFFFF) {
+                fprintf(stderr, "Value is out of bounds: %d\n", value);
                 return (1); // out of bounds
             }
             if (locationCounter > 0xFFFE) {
+                fprintf(stderr, "Location is out of bounds: %d\n", locationCounter);
                 return (1); // idk how but the user manages to put the fill command out of memory
             }
             locationCounter +=2; // increment
         }
     }    
-
+    printf("About to write %d symbols\n", symbol_count);
+    write_symbol_table(outfile);
 	/* Done doing stuff with files */
 
     fclose(infile);
@@ -209,17 +226,7 @@ int readAndParse(
     // basically splits up the line of the code into tokens, isOpCode can output a -1, which would indicate
     // not a real instruction. Or if first char is a dot, indicates pseudocode.
 
-// Symbol Table Stuff
-typedef struct {
-    char name[21]; // each name has a max of 20 characters + null terminator
-    int address; // for what mem address it's at
-    int define_check; // if it's been defined yet 
-} Symbol;
 
-#define TABLE_SIZE 1024
-
-Symbol table[TABLE_SIZE]; // initial size, maybe add feature to increase size if running out? idk ignore if we pass all tests
-int symbol_count = 0;
 
 int toNum(char * pStr)
 {
@@ -300,16 +307,19 @@ int insert_symbol(const char* name, int address) {
     
     for (int i = 0; i < symbol_count; i++) {
         if (strcmp(table[i].name, checked_name) == 0) {
+            fprintf(stderr, "%s already exists in table\n", checked_name);
             return -1; //that means this symbol already exists in the table, can't have dupes
         } 
     }
     if (symbol_count >= TABLE_SIZE) {
+        fprintf(stderr, "symbol table is full!\n");
         return -1; //table is full
     }
     strcpy(table[symbol_count].name, checked_name);
     table[symbol_count].address = address;
     table[symbol_count].define_check = 1;
     symbol_count++; // assigning all the fields
+    return 0;
 }
 
 int find_symbol(const char* name) {
@@ -318,6 +328,7 @@ int find_symbol(const char* name) {
             return table[i].address;
         }
     }
+    fprintf(stderr, "symbol not found!\n");
     return -1;
 
 }
@@ -325,17 +336,46 @@ int find_symbol(const char* name) {
 int assign_symbols(char **pLabel, int address) {
     if (*pLabel == NULL) return -1;
     if (insert_symbol(*pLabel, address) == -1) {
-        return -1; // threw some sort of error while 
+        fprintf(stderr, "Error while insertion!\n");
+        return -1; // threw some sort of error while inserting
+        
     }
     return 0;
 }
 
 int isOpcode(char *opcode) {
-    char* opcodes[] = {"add, and, br, brn, brz, brp, brnz, brnp, brzp, brnzp, halt, jmp, jsr, jsrr, ldb, ldw, lea, nop, not, ret, lshf, rshfl, rshfa, rti, stb, stw, trap, xor"};
+    fprintf(stderr, "%s\n", opcode);
+    const char *opcodes[] = {
+        "add", "and", "br", "brn", "brz", "brp",
+        "brnz", "brnp", "brzp", "brnzp",
+        "halt", "jmp", "jsr", "jsrr",
+        "ldb", "ldw", "lea", "nop", "not", "ret",
+        "lshf", "rshfl", "rshfa", "rti",
+        "stb", "stw", "trap", "xor"
+    };
+
     for (int i = 0; i < sizeof(opcodes) / sizeof(char*); i++) {
         if (strcmp(opcodes[i], opcode) == 0) {
+            fprintf(stderr, "success!\n");
             return 0;
         }
     }
     return -1;
+}
+
+// temporary testing function for the symbol table, running old LC3 labs here.
+void write_symbol_table(FILE *out)
+{
+    fprintf(out, "Label                 Address\n");
+    fprintf(out, "--------------------  -------\n");
+
+    for (int i = 0; i < symbol_count; i++)
+    {
+        fprintf(
+            out,
+            "%-20s  x%04X\n",
+            table[i].name,
+            table[i].address & 0xFFFF
+        );
+    }
 }

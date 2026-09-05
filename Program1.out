@@ -1,0 +1,14 @@
+Label                 Address
+--------------------  -------
+zero_base             x3016
+notzero               x301C
+additional_loop       x3024
+loop_to_n             x302A
+overflowed            x3046
+skip_overflow         x304A
+offset                x304C
+largevalue            x304E
+overflow              x3050
+n                     x3500
+m                     x3502
+n2them                x3504
