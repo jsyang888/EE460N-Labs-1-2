@@ -110,6 +110,7 @@ int main(int argc, char* argv[]) {
 
         if (strcmp(opcode, ".end") == 0) {
             endFound = 1;
+            originFound = 0;
             continue;
         }
 
