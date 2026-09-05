@@ -1,14 +1,35 @@
-Label                 Address
---------------------  -------
-zero_base             x3016
-notzero               x301C
-additional_loop       x3024
-loop_to_n             x302A
-overflowed            x3046
-skip_overflow         x304A
-offset                x304C
-largevalue            x304E
-overflow              x3050
-n                     x3500
-m                     x3502
-n2them                x3504
+0x3000
+0x56E0
+0x16C1
+0x0218
+0x1620
+0x040E
+0x5B60
+0x1B61
+0x0E3C
+0x5B60
+0x0E38
+0x1620
+0x0400
+0x5B60
+0x1B61
+0x5920
+0x1900
+0x54A0
+0x1485
+0xFFFFFFFF
+0x0204
+0x5B60
+0x1B42
+0xFFFFFFFF
+0xFFFFFFF6
+0x16E1
+0x1943
+0x0212
+0x0E14
+0x
+0x
+0x
+0x3500
+0x
+0x
