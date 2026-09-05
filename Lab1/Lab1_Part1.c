@@ -157,6 +157,42 @@ int main(int argc, char* argv[]) {
     }    
     printf("About to write %d symbols\n", symbol_count);
     write_symbol_table(outfile);
+
+	//Second Pass: Converting to hex code
+	fclose(infile);
+
+	infile = fopen(argv[1], "r");
+
+	if (!infile) {
+       printf("Error: Cannot open file %s\n", argv[1]);
+       exit(4);
+	}
+
+	while ((status = readAndParse(infile, line, &label, &opcode, &arg1, &arg2, &arg3, &arg4)) != DONE) {
+		
+		if(status == EMPTY_LINE) {
+			continue; //ignore blanks
+		}
+
+		//.ORIG
+		if(strcmp(opcode, ".orig") == 0) {
+			locationCounter = toNum(arg1);
+			fprintf(outfile, "x%04X\n", locationCounter);
+			continue;
+		}
+		//.FILL
+		if(strcmp(opcode, ".fill") == 0) {
+			fprint(outfile, "x%04X\n", toNum(arg1));
+		}
+		//.END
+		if(strcmp(opcode, ".end") == 0) {
+			break;
+		}
+		//No opcode (Just a label)
+		if(opcode[0] == "\0") {
+			continue;
+		}
+
 	/* Done doing stuff with files */
 
     fclose(infile);
@@ -354,6 +390,15 @@ int isOpcode(char *opcode) {
         "lshf", "rshfl", "rshfa", "rti",
         "stb", "stw", "trap", "xor"
     };
+
+	int opcodeNums[] = {
+		1<<12, 5<<12, 7<<9, 4<<9, 2<<9, 1<<9,
+		6<<9, 5<<9, 3<<9, 7<<9,
+		0xF025, 96<<9, 9<<11, 32<<9,
+		2<<12, 6<<12, 14<<12, 0, 9<<12, 0xC1C0,
+		13<<12, 13<<12, 13<<12, 0x8000,
+		3<<12, 7<<12, 0xF0<<8, 9<<12
+	};
 
     for (int i = 0; i < sizeof(opcodes) / sizeof(char*); i++) {
         if (strcmp(opcodes[i], opcode) == 0) {
