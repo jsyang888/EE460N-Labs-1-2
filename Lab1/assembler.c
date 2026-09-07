@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
             continue; // next line
         }
         if (strcmp(opcode, ".fill") == 0) {
-            fprintf(outfile, "0x%s\n", arg2);
+            fprintf(outfile, "0x%s\n", arg1);
             locationCounter += 2; // increment PC by 2
         }
         if (strcmp(opcode, "add") == 0) { // 0001 dr1 sr1 steer bit sr2/imm5
@@ -215,7 +215,7 @@ int main(int argc, char* argv[]) {
             continue; // next line
         }
         if (strcmp(opcode, "br") == 0) {
-            unsigned int binary_code = 0;
+            unsigned int binary_code = 7<<9; //Lab doc says BR is treated as BRnzp
             if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
@@ -228,10 +228,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
-            }
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brn") == 0) {
             unsigned int binary_code = 0;
@@ -248,10 +249,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
-            }
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brz") == 0) {
             unsigned int binary_code = 0;
@@ -268,10 +270,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
-            }
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brp") == 0) {
             unsigned int binary_code = 0;
@@ -288,10 +291,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
-            }
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brnz") == 0) {
             unsigned int binary_code = 0;
@@ -309,10 +313,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
-            }
+    		}
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brzp") == 0) {
             unsigned int binary_code = 0;
@@ -330,10 +335,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
             }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brnp") == 0) {
             unsigned int binary_code = 0;
@@ -351,10 +357,11 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
             }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
         if (strcmp(opcode, "brnzp") == 0) {
             unsigned int binary_code = 0;
@@ -373,13 +380,32 @@ int main(int argc, char* argv[]) {
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 binary_code |= difference;
-                fprintf(outfile, "0x%04X\n", binary_code);
-                locationCounter += 2;
-                continue;
             }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
         }
+		if(strcmp(opcode, "halt") == 0) {
+			fprintf(outfile, "0xF025\n");
+			locationCounter += 2;
+			continue;
+    	}
+		if(strcmp(opcode, "jmp") == 0) { //1100 000 BaseR 000000
+			unsigned int binary_code = 96<<9;
+			binary_code |= register_picker(arg1) << 6;
 
-    }    
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "jsr") == 0) { //0100 1 PCOffset11
+			unsigned int binary_code = 9<<11;
+		//NEED TO FINISH
+		}
+
+
 	/* Done doing stuff with files */
 
     fclose(infile);
