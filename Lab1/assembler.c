@@ -402,9 +402,184 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "jsr") == 0) { //0100 1 PCOffset11
 			unsigned int binary_code = 9<<11;
-		//NEED TO FINISH
+			if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
 		}
+		if(strcmp(opcode, "jsrr") == 0) { //0100 0 00 BaseR 000000
+			unsigned int binary_code = 32<<9;
+			binary_code |= register_picker(arg1) << 6;
 
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "ldb") == 0) { //0010 DR BaseR boffset6
+			unsigned int binary_code = 2 << 12;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "ldw") == 0) { //0110 DR BaseR offset6
+			unsigned int binary_code = 6 << 12;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "lea") == 0) { //1110 DR PCoffset9
+			unsigned int binary_code = 14<<12;
+			binary_code |= register_picker(arg1) << 9;
+			if (isalpha(arg2[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg2);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg2);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "nop") == 0) {
+			fprintf(outfile, "x0000\n");
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "not") == 0) { //1001 DR SR 1 11111
+			unsigned int binary_code = 0x903F;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "ret") == 0) {
+			fprintf(outfile, "xC1C0\n");
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "lshf") == 0) { //1101 DR SR 00 amount4
+			unsigned int binary_code = 13<<12;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "rshfl") == 0) { //1101 DR SR 01 amount4
+			unsigned int binary_code = 0xC010;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "rshfa") == 0) { //1101 DR SR 11 amount4
+			unsigned int binary_code = 0xC030;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "rti") == 0) {
+			fprintf(outfile, "x8000\n");
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "stb") == 0) { //0011 SR BaseR boffset6
+			unsigned int binary_code = 3<<12;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "stw") == 0) { //0111 SR BaseR offset6
+			unsigned int binary_code = 7<<12;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "trap") == 0) { //1111 0000 trapvect8
+			unsigned int binary_code = 0xF000;
+			binary_code |= toNum(arg1);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "xor") == 0) { //1001 DR SR steer-bit SR2/imm5
+			unsigned int binary_code = 9 << 12;
+			binary_code |= register_picker(arg1) << 9;
+			binary_code |= register_picker(arg2) << 6;
+			
+			if(register_picker(arg3) == -1) {
+				binary_code |= 1<<5;
+				binary_code |= toNum(arg3);
+			}
+			else {
+				binary_code |= register_picker(arg3);
+			}
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "x%04X\n", binary_code);
+			locationCounter +=2;
+			continue;
+		}
+	}
 
 	/* Done doing stuff with files */
 
