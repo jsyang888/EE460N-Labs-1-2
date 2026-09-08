@@ -453,7 +453,7 @@ int main(int argc, char* argv[]) {
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
                 //fprintf(outfile, "a %d\n", difference);            
-                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
             }
@@ -479,7 +479,7 @@ int main(int argc, char* argv[]) {
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
                 //fprintf(outfile, "a %d\n", difference);            
-                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
             }
@@ -533,7 +533,7 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 13<<12;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
+			binary_code |= 0x0000000F & toNum(arg3);
 
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
@@ -544,7 +544,7 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 0xC010;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
+			binary_code |= 0x0000000F & toNum(arg3);
 
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
@@ -555,7 +555,7 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 0xC030;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
+			binary_code |= 0x0000000F & toNum(arg3);
 
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
@@ -582,7 +582,7 @@ int main(int argc, char* argv[]) {
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
                 //fprintf(outfile, "a %d\n", difference);            
-                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
             }
@@ -607,7 +607,7 @@ int main(int argc, char* argv[]) {
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
                 //fprintf(outfile, "a %d\n", difference);            
-                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
             }
