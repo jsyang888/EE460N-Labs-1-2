@@ -176,7 +176,8 @@ int main(int argc, char* argv[]) {
             continue; // next line
         }
         if (strcmp(opcode, ".fill") == 0) {
-            fprintf(outfile, "0x%s\n", arg1);
+            int val = toNum(arg1);
+            fprintf(outfile, "0x%04X\n", val);
             locationCounter += 2; // increment PC by 2
         }
         if (strcmp(opcode, "add") == 0) { // 0001 dr1 sr1 steer bit sr2/imm5
@@ -186,7 +187,7 @@ int main(int argc, char* argv[]) {
             binary_code |= (register_picker(arg2)) << 6;
             if (register_picker(arg3) == -1) { //imm5
                 binary_code |= 1 << 5; // steering bit
-                binary_code |= toNum(arg3); // whatever the imm5 is
+                binary_code |= 0x0000001F & toNum(arg3); // whatever the imm5 is
             }
             else {
                 binary_code |= register_picker(arg3);
@@ -204,7 +205,7 @@ int main(int argc, char* argv[]) {
             binary_code |= (register_picker(arg2)) << 6;
             if (register_picker(arg3) == -1) { //imm5
                 binary_code |= 1 << 5; // steering bit
-                binary_code |= toNum(arg3); // whatever the imm5 is
+                binary_code |= 0x0000001F & toNum(arg3); // whatever the imm5 is
             }
             else {
                 binary_code |= register_picker(arg3);
@@ -227,6 +228,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
 			//fully in binary at this point, turn into hex
@@ -248,6 +250,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
 			//fully in binary at this point, turn into hex
@@ -269,6 +272,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
 			//fully in binary at this point, turn into hex
@@ -290,6 +294,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
 			//fully in binary at this point, turn into hex
@@ -312,6 +317,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
     		}
 			//fully in binary at this point, turn into hex
@@ -334,6 +340,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
@@ -356,6 +363,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
@@ -379,6 +387,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
@@ -396,7 +405,7 @@ int main(int argc, char* argv[]) {
 			binary_code |= register_picker(arg1) << 6;
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -416,7 +425,7 @@ int main(int argc, char* argv[]) {
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -425,7 +434,7 @@ int main(int argc, char* argv[]) {
 			binary_code |= register_picker(arg1) << 6;
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -433,10 +442,25 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 2 << 12;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
+            int address = 0;
+            if (arg3[0] == '#' | arg3[0] == 'x') {
+                address = toNum(arg3); // handles decimal or hex cases
+                binary_code |= address;
+            }
+            else {
+			    address = find_symbol(arg3); // else, it is a label
+                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                //fprintf(outfile, "a1 %d\n", address);  
+                //fprintf(outfile, "a2 %d\n", locationCounter);  
+                //fprintf(outfile, "a %d\n", difference);            
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                //fprintf(outfile, "0x%04X\n", difference);
+                binary_code |= difference;  
+            }
+
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -444,10 +468,23 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 6 << 12;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
-
+            int address = 0;
+            if (arg3[0] == '#' | arg3[0] == 'x') {
+                address = toNum(arg3); // handles decimal or hex cases
+                binary_code |= address;
+            }
+            else {
+			    address = find_symbol(arg3); // else, it is a label
+                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                //fprintf(outfile, "a1 %d\n", address);  
+                //fprintf(outfile, "a2 %d\n", locationCounter);  
+                //fprintf(outfile, "a %d\n", difference);            
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                //fprintf(outfile, "0x%04X\n", difference);
+                binary_code |= difference;  
+            }
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -468,12 +505,12 @@ int main(int argc, char* argv[]) {
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
 		if(strcmp(opcode, "nop") == 0) {
-			fprintf(outfile, "x0000\n");
+			fprintf(outfile, "0x0000\n");
 			locationCounter += 2;
 			continue;
 		}
@@ -483,12 +520,12 @@ int main(int argc, char* argv[]) {
 			binary_code |= register_picker(arg2) << 6;
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
 		if(strcmp(opcode, "ret") == 0) {
-			fprintf(outfile, "xC1C0\n");
+			fprintf(outfile, "0xC1C0\n");
 			locationCounter += 2;
 			continue;
 		}
@@ -499,7 +536,7 @@ int main(int argc, char* argv[]) {
 			binary_code |= toNum(arg3);
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -510,7 +547,7 @@ int main(int argc, char* argv[]) {
 			binary_code |= toNum(arg3);
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -521,12 +558,12 @@ int main(int argc, char* argv[]) {
 			binary_code |= toNum(arg3);
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
 		if(strcmp(opcode, "rti") == 0) {
-			fprintf(outfile, "x8000\n");
+			fprintf(outfile, "0x8000\n");
 			locationCounter += 2;
 			continue;
 		}
@@ -534,10 +571,24 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 3<<12;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
+            int address = 0;
+            if (arg3[0] == '#' | arg3[0] == 'x') {
+                address = toNum(arg3); // handles decimal or hex cases
+                binary_code |= address;
+            }
+            else {
+			    address = find_symbol(arg3); // else, it is a label
+                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                //fprintf(outfile, "a1 %d\n", address);  
+                //fprintf(outfile, "a2 %d\n", locationCounter);  
+                //fprintf(outfile, "a %d\n", difference);            
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                //fprintf(outfile, "0x%04X\n", difference);
+                binary_code |= difference;  
+            }
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -545,10 +596,24 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 7<<12;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
-			binary_code |= toNum(arg3);
+            int address = 0;
+            if (arg3[0] == '#' | arg3[0] == 'x') {
+                address = toNum(arg3); // handles decimal or hex cases
+                binary_code |= address;
+            }
+            else {
+			    address = find_symbol(arg3); // else, it is a label
+                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                //fprintf(outfile, "a1 %d\n", address);  
+                //fprintf(outfile, "a2 %d\n", locationCounter);  
+                //fprintf(outfile, "a %d\n", difference);            
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                //fprintf(outfile, "0x%04X\n", difference);
+                binary_code |= difference;  
+            }
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -557,7 +622,7 @@ int main(int argc, char* argv[]) {
 			binary_code |= toNum(arg1);
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
 			continue;
 		}
@@ -575,7 +640,7 @@ int main(int argc, char* argv[]) {
 			}
 
 			//fully in binary at this point, turn into hex
-			fprintf(outfile, "x%04X\n", binary_code);
+			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter +=2;
 			continue;
 		}
@@ -754,6 +819,7 @@ int find_symbol(const char* name) {
         }
     }
     fprintf(stderr, "symbol not found!\n");
+    fprintf(stderr, "%s\n", name);
     return -1;
 
 }

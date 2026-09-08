@@ -10,7 +10,7 @@
 ; Read the complete Project Description on the Google doc linked
     .ORIG  x3000
 ;---- Your Solution goes here
-    LDW R0, R7, #0 ; R0 = N
+    LDB R0, R7, #0 ; R0 = N
     LDW R1, R7, #1 ; R1 = M
     
 ; fringe cases
@@ -50,7 +50,7 @@ loop_to_N
     ADD R5, R5, R2 ; R5 = R2
     ADD R1, R1, #-1 ; R1 -= 1
     BRp additional_loop ; if R1 is still positive, rerun xN with new N
-    LDW R3, LargeValue ; R3 = x7FFF
+    LDW R3, R2, LargeValue ; R3 = x7FFF
     NOT R3, R3
     ADD R3, R3, #1 ; R3 = -R3
     ADD R4, R5, R3 ; R4 = R5 - R3
@@ -58,7 +58,7 @@ loop_to_N
     STW R5, R7, #2 ; if R5 isn't larger, store R5 as result
     BRnzp skip_overflow ; jump to end of program
 overflowed
-    LDW R6, Overflow ; R6 = xFFFF
+    LDB R6, R2, Overflow ; R6 = xFFFF
     STW R6, R7, #2 ; store -1 as result
 skip_overflow
 ;---- Done
