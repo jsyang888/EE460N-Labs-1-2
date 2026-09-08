@@ -228,6 +228,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -250,6 +251,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -272,6 +274,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -294,6 +297,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -317,6 +321,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
     		}
@@ -340,6 +345,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
@@ -363,6 +369,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
@@ -387,6 +394,7 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
@@ -422,6 +430,8 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
+                difference &= 0x07FF; // mask last 11 bits
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
@@ -452,7 +462,8 @@ int main(int argc, char* argv[]) {
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);            
+                //fprintf(outfile, "a %d\n", difference);
+                difference = difference << 1;            
                 difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
@@ -478,7 +489,8 @@ int main(int argc, char* argv[]) {
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);            
+                //fprintf(outfile, "a %d\n", difference);       
+                difference = difference << 1;     
                 difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
@@ -502,6 +514,8 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE); // invalid symbol
                 }
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
+                difference = difference << 1;
+                difference &= 0x01FF;
                 binary_code |= difference;
             }
 			//fully in binary at this point, turn into hex
@@ -581,6 +595,7 @@ int main(int argc, char* argv[]) {
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
                 //fprintf(outfile, "a %d\n", difference);            
+                difference = difference << 1;
                 difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
@@ -605,7 +620,8 @@ int main(int argc, char* argv[]) {
                 int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
                 //fprintf(outfile, "a1 %d\n", address);  
                 //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);            
+                //fprintf(outfile, "a %d\n", difference);     
+                difference = difference << 1;       
                 difference &= 0x0000003F; // remove the high bits which shouldn't even be there
                 //fprintf(outfile, "0x%04X\n", difference);
                 binary_code |= difference;  
@@ -618,7 +634,9 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "trap") == 0) { //1111 0000 trapvect8
 			unsigned int binary_code = 0xF000;
-			binary_code |= 0xFF & toNum(arg1);
+            int temp = toNum(arg1);
+            temp = temp << 1;
+			binary_code |= 0xFF & temp; // Lshift 1
 
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
