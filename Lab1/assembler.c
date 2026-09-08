@@ -544,6 +544,7 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 0xC010;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
+            binary_code |= 1 << 5;
 			binary_code |= 0x0000000F & toNum(arg3);
 
 			//fully in binary at this point, turn into hex
@@ -555,6 +556,7 @@ int main(int argc, char* argv[]) {
 			unsigned int binary_code = 0xC030;
 			binary_code |= register_picker(arg1) << 9;
 			binary_code |= register_picker(arg2) << 6;
+            binary_code |= 3 << 5;
 			binary_code |= 0x0000000F & toNum(arg3);
 
 			//fully in binary at this point, turn into hex
