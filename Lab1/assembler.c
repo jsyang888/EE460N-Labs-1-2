@@ -1,3 +1,11 @@
+/*
+	Name 1: Justin Yang
+	Name 2: Manu Vajha
+	UTEID 1: jsy558
+	UTEID 2: mcv925
+*/
+
+
 #include <stdio.h> /* standard input/output library */
 #include <stdlib.h> /* Standard C Library */
 #include <string.h> /* String operations library */
@@ -82,10 +90,8 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(opcode, ".orig") == 0) {
             int origin;
-            if (!toNum(arg1)) // invalid number
-            {
-                exit(1);
-            }
+            int value = toNum(arg1);
+
 
 			origin = toNum(arg1);
 
@@ -136,14 +142,7 @@ int main(int argc, char* argv[]) {
 
         if (strcmp(opcode, ".fill") == 0) {
             //fill line command
-            int value;
-
-            if (!toNum(arg1)) {
-                fprintf(stderr, "Not a valid fill value: .fill %s", arg1);
-                return(1); // not a valid fill value
-            }
-
-			value = toNum(arg1);
+            int value = toNum(arg1);
 
             if (value < -32768 || value > 0xFFFF) {
                 fprintf(stderr, "Value is out of bounds: %d\n", value);
@@ -172,12 +171,12 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(opcode, ".orig") == 0) {
             locationCounter = toNum(arg1); // set location
-            fprintf(outfile, "0%s\n", arg1); // just print the orig value
+            fprintf(outfile, "0x%04X\n", (unsigned int)locationCounter); // just print the orig value
             continue; // next line
         }
         if (strcmp(opcode, ".fill") == 0) {
             int val = toNum(arg1);
-            fprintf(outfile, "0x%04X\n", val);
+            fprintf(outfile, "0x%04X\n", (unsigned int)val & 0xFFFFu);
             locationCounter += 2; // increment PC by 2
         }
         if (strcmp(opcode, "add") == 0) { // 0001 dr1 sr1 steer bit sr2/imm5
@@ -217,7 +216,7 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(opcode, "br") == 0) {
             unsigned int binary_code = 7<<9; //Lab doc says BR is treated as BRnzp
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -227,8 +226,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference /2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -240,7 +239,7 @@ int main(int argc, char* argv[]) {
         if (strcmp(opcode, "brn") == 0) {
             unsigned int binary_code = 0;
             binary_code |= 1 << 11;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -250,8 +249,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -263,7 +262,7 @@ int main(int argc, char* argv[]) {
         if (strcmp(opcode, "brz") == 0) {
             unsigned int binary_code = 0;
             binary_code |= 1 << 10;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -273,8 +272,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -286,7 +285,7 @@ int main(int argc, char* argv[]) {
         if (strcmp(opcode, "brp") == 0) {
             unsigned int binary_code = 0;
             binary_code |= 1 << 9;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -296,8 +295,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
 			}
@@ -310,7 +309,7 @@ int main(int argc, char* argv[]) {
             unsigned int binary_code = 0;
             binary_code |= 1 << 11;
             binary_code |= 1 << 10;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -320,8 +319,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
     		}
@@ -334,7 +333,7 @@ int main(int argc, char* argv[]) {
             unsigned int binary_code = 0;
             binary_code |= 1 << 10;
             binary_code |= 1 << 9;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -344,8 +343,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
@@ -358,7 +357,7 @@ int main(int argc, char* argv[]) {
             unsigned int binary_code = 0;
             binary_code |= 1 << 11;
             binary_code |= 1 << 9;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -368,8 +367,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
@@ -383,7 +382,7 @@ int main(int argc, char* argv[]) {
             binary_code |= 1 << 11;
             binary_code |= 1 << 10;
             binary_code |= 1 << 9;
-            if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -393,8 +392,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x000001FF; // remove the high bits which shouldn't even be there
                 binary_code |= difference;
             }
@@ -419,7 +418,7 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "jsr") == 0) { //0100 1 PCOffset11
 			unsigned int binary_code = 9<<11;
-			if (isalpha(arg1[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+			if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg1);
                 binary_code |= offset;
             }
@@ -429,8 +428,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x07FF; // mask last 11 bits
                 binary_code |= difference;
             }
@@ -450,24 +449,21 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "ldb") == 0) { //0010 DR BaseR boffset6
 			unsigned int binary_code = 2 << 12;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
-            int address = 0;
-            if (arg3[0] == '#' | arg3[0] == 'x') {
-                address = toNum(arg3); // handles decimal or hex cases
-                binary_code |= address;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Load offset out of range: %s\n", arg3);
+                exit(4);
             }
-            else {
-			    address = find_symbol(arg3); // else, it is a label
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                //fprintf(outfile, "a1 %d\n", address);  
-                //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);
-                difference = difference << 1;            
-                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
-                //fprintf(outfile, "0x%04X\n", difference);
-                binary_code |= difference;  
-            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
 
 
 			//fully in binary at this point, turn into hex
@@ -477,24 +473,21 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "ldw") == 0) { //0110 DR BaseR offset6
 			unsigned int binary_code = 6 << 12;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
-            int address = 0;
-            if (arg3[0] == '#' | arg3[0] == 'x') {
-                address = toNum(arg3); // handles decimal or hex cases
-                binary_code |= address;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Load offset out of range: %s\n", arg3);
+                exit(4);
             }
-            else {
-			    address = find_symbol(arg3); // else, it is a label
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                //fprintf(outfile, "a1 %d\n", address);  
-                //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);       
-                difference = difference << 1;     
-                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
-                //fprintf(outfile, "0x%04X\n", difference);
-                binary_code |= difference;  
-            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
 			locationCounter += 2;
@@ -502,8 +495,13 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "lea") == 0) { //1110 DR PCoffset9
 			unsigned int binary_code = 14<<12;
-			binary_code |= register_picker(arg1) << 9;
-			if (isalpha(arg2[0]) == 0) { //zero, which means that it is not alphabet, so a direct offset
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			if (arg2[0] == '#' || arg2[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
                 int offset = toNum(arg2);
                 binary_code |= offset;
             }
@@ -513,8 +511,8 @@ int main(int argc, char* argv[]) {
                     //invalid symbol
                     exit(EXIT_FAILURE); // invalid symbol
                 }
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                difference = difference << 1;
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
                 difference &= 0x01FF;
                 binary_code |= difference;
             }
@@ -530,7 +528,12 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "not") == 0) { //1001 DR SR 1 11111
 			unsigned int binary_code = 0x903F;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
@@ -544,7 +547,12 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "lshf") == 0) { //1101 DR SR 00 amount4
 			unsigned int binary_code = 13<<12;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
 			binary_code |= 0x0000000F & toNum(arg3);
 
@@ -554,8 +562,13 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		if(strcmp(opcode, "rshfl") == 0) { //1101 DR SR 01 amount4
-			unsigned int binary_code = 0xC010;
-			binary_code |= register_picker(arg1) << 9;
+			unsigned int binary_code = 0xD010;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
 			binary_code |= 0x0000000F & toNum(arg3);
 
@@ -565,8 +578,13 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		if(strcmp(opcode, "rshfa") == 0) { //1101 DR SR 11 amount4
-			unsigned int binary_code = 0xC030;
-			binary_code |= register_picker(arg1) << 9;
+			unsigned int binary_code = 0xD030;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
 			binary_code |= 0x0000000F & toNum(arg3);
 
@@ -582,24 +600,21 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "stb") == 0) { //0011 SR BaseR boffset6
 			unsigned int binary_code = 3<<12;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
-            int address = 0;
-            if (arg3[0] == '#' | arg3[0] == 'x') {
-                address = toNum(arg3); // handles decimal or hex cases
-                binary_code |= address;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Store offset out of range: %s\n", arg3);
+                exit(4);
             }
-            else {
-			    address = find_symbol(arg3); // else, it is a label
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                //fprintf(outfile, "a1 %d\n", address);  
-                //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);            
-                difference = difference << 1;
-                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
-                //fprintf(outfile, "0x%04X\n", difference);
-                binary_code |= difference;  
-            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
 
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
@@ -608,24 +623,21 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "stw") == 0) { //0111 SR BaseR offset6
 			unsigned int binary_code = 7<<12;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
-            int address = 0;
-            if (arg3[0] == '#' | arg3[0] == 'x') {
-                address = toNum(arg3); // handles decimal or hex cases
-                binary_code |= address;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Store offset out of range: %s\n", arg3);
+                exit(4);
             }
-            else {
-			    address = find_symbol(arg3); // else, it is a label
-                int difference = address - locationCounter; // if address is bigger, positive offset, otherwise negative
-                //fprintf(outfile, "a1 %d\n", address);  
-                //fprintf(outfile, "a2 %d\n", locationCounter);  
-                //fprintf(outfile, "a %d\n", difference);     
-                difference = difference << 1;       
-                difference &= 0x0000003F; // remove the high bits which shouldn't even be there
-                //fprintf(outfile, "0x%04X\n", difference);
-                binary_code |= difference;  
-            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
 
 			//fully in binary at this point, turn into hex
 			fprintf(outfile, "0x%04X\n", binary_code);
@@ -635,7 +647,6 @@ int main(int argc, char* argv[]) {
 		if(strcmp(opcode, "trap") == 0) { //1111 0000 trapvect8
 			unsigned int binary_code = 0xF000;
             int temp = toNum(arg1);
-            temp = temp << 1;
 			binary_code |= 0xFF & temp; // Lshift 1
 
 			//fully in binary at this point, turn into hex
@@ -645,7 +656,12 @@ int main(int argc, char* argv[]) {
 		}
 		if(strcmp(opcode, "xor") == 0) { //1001 DR SR steer-bit SR2/imm5
 			unsigned int binary_code = 9 << 12;
-			binary_code |= register_picker(arg1) << 9;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
 			binary_code |= register_picker(arg2) << 6;
 			
 			if(register_picker(arg3) == -1) {

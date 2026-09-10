@@ -50,7 +50,8 @@ loop_to_N
     ADD R5, R5, R2 ; R5 = R2
     ADD R1, R1, #-1 ; R1 -= 1
     BRp additional_loop ; if R1 is still positive, rerun xN with new N
-    LDW R3, R2, LargeValue ; R3 = x7FFF
+    LEA R3, LargeValue  ; get its address
+    LDW R3, R3, #0     ; load the word at that address
     NOT R3, R3
     ADD R3, R3, #1 ; R3 = -R3
     ADD R4, R5, R3 ; R4 = R5 - R3
@@ -58,7 +59,8 @@ loop_to_N
     STW R5, R7, #2 ; if R5 isn't larger, store R5 as result
     BRnzp skip_overflow ; jump to end of program
 overflowed
-    LDB R6, R2, Overflow ; R6 = xFFFF
+    LEA R3, Overflow
+    LDB R6, R3, #0 ; R6 = xFFFF
     STW R6, R7, #2 ; store -1 as result
 skip_overflow
 ;---- Done
@@ -69,7 +71,7 @@ Offset
 LargeValue
     .FILL x7FFF
 Overflow
-    .FILL xFFFE
+    .FILL xFFFF
     .END
     
 ;---- Data: Inputs and Output go here
