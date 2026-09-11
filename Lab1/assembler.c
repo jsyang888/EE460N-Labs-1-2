@@ -117,8 +117,7 @@ int main(int argc, char* argv[]) {
 
         if (strcmp(opcode, ".end") == 0) {
             endFound = 1;
-            originFound = 0;
-            continue;
+            break;
         }
 
         // now, check for a label
@@ -168,6 +167,10 @@ int main(int argc, char* argv[]) {
     while ((status = readAndParse(infile, line, &label, &opcode, &arg1, &arg2, &arg3, &arg4)) != DONE) {
         if (status == EMPTY_LINE) {
             continue; // ignore the blank, save some time
+        }
+        if (strcmp(opcode, ".end") == 0) {
+            endFound = 1;
+            break;
         }
         if (strcmp(opcode, ".orig") == 0) {
             locationCounter = toNum(arg1); // set location
