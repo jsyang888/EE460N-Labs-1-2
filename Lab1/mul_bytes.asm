@@ -24,8 +24,8 @@ LoopOver LEA R5, Negative256
 Result  STB R4, R0, #3 ; 1 -> MEM[x3103] 
         STB R3, R0, #2 ; Result -> MEM[x3102]
 
-
+HALT
 Access .FILL x3100
 Negative256 .FILL xFF00
-HALT
+
 .END

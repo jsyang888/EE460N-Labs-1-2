@@ -1,0 +1,3 @@
+.ORIG x3000
+XOR R2, R1, #-1
+.END

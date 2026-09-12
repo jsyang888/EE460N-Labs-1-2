@@ -664,13 +664,13 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Invalid register: %s\n", arg1);
                 exit(4);
             }
-            binary_code |= (unsigned int)dr << 9;
-			binary_code |= register_picker(arg2) << 6;
+            binary_code |= (unsigned int)dr << 9; //dr
+			binary_code |= register_picker(arg2) << 6; // sr1
 			
-			if(register_picker(arg3) == -1) {
+			if(register_picker(arg3) == -1) { //check if third is SR2 or imm5
 				binary_code |= 1<<5;
-				binary_code |= toNum(arg3);
-			}
+				binary_code |= toNum(arg3) & 0x1F;
+			 }
 			else {
 				binary_code |= 0x1F & register_picker(arg3);
 			}
