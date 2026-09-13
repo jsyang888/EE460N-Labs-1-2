@@ -434,35 +434,14 @@ void process_instruction(){
 
         int CCbits = (current_instruction & 0x0E00) >> 9; //00001110 0000 0000 
         int PCoffset9 = (current_instruction &0x1FF); // last 9 bits 
+        if (PCoffset9 & 0x100) {  // convert to negative if bit 8 is 1
+            PCoffset9 -= 0x200;  
+        }
 
-
-        if (CCbits == 0 || CCbits == 7) { //BR or BRnzp are unconditional
-            NEXT_LATCHES.PC += PCoffset9; //do the unconditional branch 
-        }    
-        else if (CCbits == 6 && CURRENT_LATCHES.N == 1 && CURRENT_LATCHES.Z == 1) {
-            // BRnz satisfied
-            NEXT_LATCHES.PC += PCoffset9;
-        }
-        else if (CCbits == 5 && CURRENT_LATCHES.N == 1 && CURRENT_LATCHES.P == 1) {
-            // BRnp satisfied
-            NEXT_LATCHES.PC += PCoffset9;
-        }
-        else if (CCbits == 3 && CURRENT_LATCHES.Z == 1 && CURRENT_LATCHES.P == 1) {
-            // BRzp satisfied
-            NEXT_LATCHES.PC += PCoffset9;
-        }
-        else if (CCbits == 4 && CURRENT_LATCHES.N == 1) {
-            // BRn satisfied
-            NEXT_LATCHES.PC += PCoffset9;
-        }
-        else if (CCbits == 2 && CURRENT_LATCHES.Z == 1) {
-            // BRz satisfied
-            NEXT_LATCHES.PC += PCoffset9;
-        }
-        else if (CCbits == 1 && CURRENT_LATCHES.P == 1) {
-            // BRp satisfied
-            NEXT_LATCHES.PC += PCoffset9;
-        }
+        int takeBranch = ((CCbits & 4) && CURRENT_LATCHES.N) || ((CCbits & 2) && CURRENT_LATCHES.Z) || ((CCbits & 1) && CURRENT_LATCHES.P);
+        if (takeBranch) {
+        NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + PCoffset9 * 2);
+}
     }
     //add instructions
     else if (opcode == 1) {
@@ -501,7 +480,10 @@ void process_instruction(){
         int BaseR = (current_instruction & 0x1C0) >> 6;
         NEXT_LATCHES.PC = MEMORY[CURRENT_LATCHES.REGS[BaseR]]; // jump to baseR value 
     }
+    //jsr instructions
+    else if (opcode == 4) {
 
+    }
 
 
 }
