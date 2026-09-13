@@ -1,0 +1,162 @@
+;Going to test all cases of opcodes & labels on .FILL
+.ORIG xABCC
+
+;ADD
+START_LABEL	ADD R0, R6, R7
+			ADD R1, R1, #70
+			ADD R2, R2, #-70
+			ADD R3, R4, x70
+			ADD R5, R5, x-70
+
+;AND
+AND R0, R6, R7
+AND R1, R1, #70
+AND R2, R2, #-70
+AND R3, R4, x70
+AND R5, R5, x-70
+
+;BR's
+BRn START_LABEL
+BRn END_LABEL
+BRn #70
+BRn #-70
+BRn x70
+BRn x-70
+
+BRz START_LABEL
+BRz END_LABEL
+BRz #70
+BRz #-70
+BRz x70
+BRz x-70
+
+BRp START_LABEL
+BRp END_LABEL
+BRp #70
+BRp #-70
+BRp x70
+BRp x-70
+
+BR START_LABEL
+BR END_LABEL
+BR #70
+BR #-70
+BR x70
+BR x-70
+
+BRzp START_LABEL
+BRzp END_LABEL
+BRzp #70
+BRzp #-70
+BRzp x70
+BRzp x-70
+
+BRnp START_LABEL
+BRnp END_LABEL
+BRnp #70
+BRnp #-70
+BRnp x70
+BRnp x-70
+
+BRnz START_LABEL
+BRnz END_LABEL
+BRnz #70
+BRnz #-70
+BRnz x70
+BRnz x-70
+
+BRnzp START_LABEL
+BRnzp END_LABEL
+BRnzp #70
+BRnzp #-70
+BRnzp x70
+BRnzp x-70
+
+;JMP
+JMP R2
+
+;RET
+RET
+
+;JSR
+JSR START_LABEL
+JSR END_LABEL
+JSR #70
+JSR #-70
+JSR x70
+JSR x-70
+
+;JSRR
+JSRR R5
+
+;LDB
+LDB R0, R1, #30
+LDB R2, R3, #-30
+LDB R4, R5, x05
+LDB R6, R7, x-05
+
+;LDW
+LDW R0, R1, #30
+LDW R2, R3, #-30
+LDW R4, R5, x05
+LDW R6, R7, x-05
+
+;LEA
+LEA R0, A
+LEA R1, START_LABEL
+LEA R2, #70
+LEA R3, #-70 ;WRONG!!!!!
+LEA R4, x70
+LEA R5, x-70 ;WRONG!!!!!
+
+;NOT
+NOT R0, R1
+
+;RTI
+RTI
+
+;LSHF
+LSHF R0, R1, #6
+LSHF R2, R3, #-6
+LSHF R4, R5, x6
+LSHF R6, R7, x-6
+
+;RSHFL
+RSHFL R0, R1, #6
+RSHFL R2, R3, #-6
+RSHFL R4, R5, x6
+RSHFL R6, R7, x-6
+
+;RSHFA
+RSHFA R0, R1, #6
+RSHFA R2, R3, #-6
+RSHFA R4, R5, x6
+RSHFA R6, R7, x-6
+
+;STB
+STB R0, R1, #30
+STB R2, R3, #-30
+STB R4, R5, x05
+STB R6, R7, x-05
+
+;STW
+STW R0, R1, #30
+STW R2, R3, #-30
+STW R4, R5, x05
+STW R6, R7, x-05
+
+;TRAP
+TRAP x25
+TRAP xDE
+
+;XOR
+			XOR R0, R6, R7
+			XOR R1, R1, #70
+			XOR R2, R2, #-70
+			XOR R3, R4, x70
+END_LABEL	XOR R5, R5, x-70
+HALT
+
+A .FILL xFFFF
+
+.END
