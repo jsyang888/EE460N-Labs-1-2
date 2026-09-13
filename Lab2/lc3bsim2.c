@@ -412,11 +412,11 @@ void process_instruction(){
    *       -Execute
    *       -Update NEXT_LATCHES
    */
-    //fetch stage:
+
     int current_instruction = 0;
     current_instruction = Low16bits(MEMORY[CURRENT_LATCHES.PC/2][0] << 8 | MEMORY[CURRENT_LATCHES.PC/2][1]);
     NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2; //increment PC now
-    //decode:
+
     int opcode = (current_instruction & 0xF000) >> 12; // after keeping only instruction bits, shift into 0-3
     if (opcode == 10 || opcode == 11) { //not opcodes in LC3b
         printf("Invalid Opcode %b", opcode);
@@ -480,14 +480,81 @@ void process_instruction(){
         int BaseR = (current_instruction & 0x1C0) >> 6;
         NEXT_LATCHES.PC = MEMORY[CURRENT_LATCHES.REGS[BaseR]]; // jump to baseR value 
     }
-    //jsr instructions
+    //jsr / r instructions 
+    // NOT SURE ABOUT THIS ONE CHECK LAB2 DOC
     else if (opcode == 4) {
-
+        if (current_instruction & 0x800) {
+            // bit 12 is 1 so JSR mode
+            int PCoffset11 = current_instruction & 0x07FF; // mask for 11 bits
+            if (PCoffset11 & 0x0400) { // first bit is one, make negative
+                PCoffset11 -= 0x800;
+            }
+            NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + PCoffset11);
+        }
+        else {
+            // jsrr in this case
+            int BaseR = (current_instruction & 0x1C0) >> 6;
+            NEXT_LATCHES.REGS[7] = CURRENT_LATCHES.PC; // save next PC value to R7 of next state
+            NEXT_LATCHES.PC = MEMORY[CURRENT_LATCHES.REGS[BaseR]]; // jump to baseR value 
+        }
     }
+    // ldb instructions
+    else if (opcode == 2) {
+        int DR = (current_instruction & 0x0E00) >> 9;
+        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int boffset6 = (current_instruction & 0x3F);
+        if (boffset6 & 0x20) {
+            //negative
+            boffset6 -= 0x10;
+        }
+        int temp = MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][0];
+        if (temp & 0x80) {
+            // bit 7 is high, sign extend
+            temp |= 0xFF00;
+        } 
+        NEXT_LATCHES.REGS[DR] = temp;
+        CCsetter(DR);
+    }
+    // ldw instructions
+    else if (opcode == 6) {
+        int DR = (current_instruction & 0x0E00) >> 9;
+        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int boffset6 = (current_instruction & 0x3F);
+        if (boffset6 & 0x20) {
+            //negative
+            boffset6 -= 0x10;
+        }
+        int temp = (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][0] << 8) | (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][1]);
+        NEXT_LATCHES.REGS[DR] = temp;
+        CCsetter(DR);
+    }
+    // lea instructions DO NOT SET CC
+    else if (opcode == 14) {
+        int DR = (current_instruction & 0x0E00) >> 9;
+        int PCoffset9 = (current_instruction &0x1FF); // last 9 bits 
+        if (PCoffset9 & 0x100) {  // convert to negative if bit 8 is 1
+            PCoffset9 -= 0x200;  
+        }
+        NEXT_LATCHES.REGS[DR] = Low16bits(NEXT_LATCHES.PC + (PCoffset9 << 1)); // set DR to address of offset
+    }
+    // not instructions
+    else if (opcode == 9) {
+        int DR = (current_instruction & 0x0E00) >> 9;
+        int SR = (current_instruction & 0x00E0) >> 6;
+        NEXT_LATCHES.REGS[DR] = ~CURRENT_LATCHES.REGS[SR]; // not the value in the SR into DR
+        CCsetter(DR);
+    }
+    // ret instructions
+    
+
+
 
 
 }
 
+
+
+// helper function to set CC bits based on value of the DR
 void CCsetter(int DR) {
     if (NEXT_LATCHES.REGS[DR] > 0) {
         // positive
