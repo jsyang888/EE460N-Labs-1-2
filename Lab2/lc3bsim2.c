@@ -419,7 +419,7 @@ void process_instruction(){
 
     int opcode = (current_instruction & 0xF000) >> 12; // after keeping only instruction bits, shift into 0-3
     if (opcode == 10 || opcode == 11) { //not opcodes in LC3b
-        printf("Invalid Opcode %b", opcode);
+        // invalid opcode
         exit;
     }
     for (int i = 0; i < LC_3b_REGS; i++) {
@@ -537,19 +537,98 @@ void process_instruction(){
         }
         NEXT_LATCHES.REGS[DR] = Low16bits(NEXT_LATCHES.PC + (PCoffset9 << 1)); // set DR to address of offset
     }
-    // not instructions
+    // not instructions / XOR
     else if (opcode == 9) {
-        int DR = (current_instruction & 0x0E00) >> 9;
-        int SR = (current_instruction & 0x00E0) >> 6;
-        NEXT_LATCHES.REGS[DR] = ~CURRENT_LATCHES.REGS[SR]; // not the value in the SR into DR
-        CCsetter(DR);
+        // NOT part
+        if (current_instruction & 0x3F == 0x3F) {
+            int DR = (current_instruction & 0x0E00) >> 9;
+            int SR = (current_instruction & 0x00E0) >> 6;
+            NEXT_LATCHES.REGS[DR] = ~CURRENT_LATCHES.REGS[SR]; // not the value in the SR into DR
+            CCsetter(DR);
+        }
+        else if (current_instruction & 0x20 == 0) {
+            int DR = (current_instruction & 0x0E00) >> 9;
+            int SR1 = (current_instruction & 0x00E0) >> 6;
+            int SR2 = (current_instruction & 0x0007);
+            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ CURRENT_LATCHES.REGS[SR2] ; // XOR the two regs, put into DR
+            CCsetter(DR);
+        }
+        else if (current_instruction & 0x20) {
+            // steering bit is 1
+            int DR = (current_instruction & 0x0E00) >> 9;
+            int SR1 = (current_instruction & 0x00E0) >> 6;
+            int imm5 = (current_instruction & 0x001F);
+            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ imm5 ; // XOR the SR1 with imm5, put in DR
+            CCsetter(DR);
+        }
+        
     }
     // ret instructions
-    
-
-
-
-
+    else if (opcode == 12) {
+        NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7]; // set PC = R7
+    }
+    // rti SKIP DO NOT NEED TO IMPLEMENT
+    // shf instructions
+    else if (opcode == 13) {
+        int DR = (current_instruction & 0x0E00) >> 9;
+        int SR = (current_instruction & 0x00E0) >> 6;
+        int steer = (current_instruction & 0x30);
+        int amt4 = current_instruction & 0xF;
+        if (steer == 0) {
+            //LSHF
+            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR] << amt4; 
+            CCsetter(DR);
+        }
+        else if (steer == 1) {
+            //RSHFL
+            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR] >> amt4;
+            CCsetter(DR);
+        }
+        else if (steer == 3 ) {
+            //RSHFA
+            int temp = CURRENT_LATCHES.REGS[SR] >> amt4;
+            // now need to take the SR[15] and sign extend
+            if (CURRENT_LATCHES.REGS[SR] & 0x8000) {
+                // if bit 15 is 1:
+                for (int i = 0; i < amt4; i++) {
+                    temp |= 1 << (15-amt4); // i think this shifts 1s to the front for however many times
+                    // it's shifted over
+                }
+            }
+            // if bit 15 is zero, nothing to do
+            NEXT_LATCHES.REGS[DR] = temp;
+            CCsetter(DR);
+        }
+    } 
+    // stb instructions
+    else if (opcode == 3) {
+        int SR = (current_instruction & 0x0E00) >> 9;
+        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int boffset6 = (current_instruction & 0x3F);
+        if (boffset6 & 0x20) {
+            //negative
+            boffset6 -= 0x10;
+        }
+        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)][0] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
+    }
+    // stw instructions
+    else if (opcode == 7) {
+        int SR = (current_instruction & 0x0E00) >> 9;
+        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int boffset6 = (current_instruction & 0x3F);
+        if (boffset6 & 0x20) {
+            //negative
+            boffset6 -= 0x10;
+        }
+        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)][0] = CURRENT_LATCHES.REGS[SR] & 0xFF00; // only store the lower 8 bits
+        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)][1] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // store msb at higher address, little endian
+    }
+    // trap instructions
+    else if (opcode == 15) {
+        // set PC to 0
+        NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC; // store return address into R7
+        NEXT_LATCHES.PC = 0; // set PC = 0
+    }
 }
 
 
