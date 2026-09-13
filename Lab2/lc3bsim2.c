@@ -401,7 +401,7 @@ int main(int argc, char *argv[]) {
 
 /***************************************************************/
 
-
+void CCsetter(int DR);
 
 void process_instruction(){
   /*  function: process_instruction
@@ -478,7 +478,7 @@ void process_instruction(){
     //jmp instructions
     else if (opcode == 12) {
         int BaseR = (current_instruction & 0x1C0) >> 6;
-        NEXT_LATCHES.PC = MEMORY[CURRENT_LATCHES.REGS[BaseR]]; // jump to baseR value 
+        NEXT_LATCHES.PC = Low16bits(MEMORY[CURRENT_LATCHES.REGS[BaseR]][1] << 8 | MEMORY[CURRENT_LATCHES.REGS[BaseR]][0]); // jump to baseR value 
     }
     //jsr / r instructions 
     // NOT SURE ABOUT THIS ONE CHECK LAB2 DOC
@@ -495,7 +495,7 @@ void process_instruction(){
             // jsrr in this case
             int BaseR = (current_instruction & 0x1C0) >> 6;
             NEXT_LATCHES.REGS[7] = CURRENT_LATCHES.PC; // save next PC value to R7 of next state
-            NEXT_LATCHES.PC = MEMORY[CURRENT_LATCHES.REGS[BaseR]]; // jump to baseR value 
+            NEXT_LATCHES.PC = Low16bits(MEMORY[CURRENT_LATCHES.REGS[BaseR]][1] << 8 | MEMORY[CURRENT_LATCHES.REGS[BaseR]][0]); // jump to baseR value 
         }
     }
     // ldb instructions
