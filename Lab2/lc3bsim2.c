@@ -524,7 +524,7 @@ void process_instruction(){
             //negative
             boffset6 -= 0x10;
         }
-        int temp = (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][0] << 8) | (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][1]);
+        int temp = (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][1] << 8) | (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][0]);
         NEXT_LATCHES.REGS[DR] = temp;
         CCsetter(DR);
     }
