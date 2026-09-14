@@ -380,7 +380,7 @@ int main(int argc, char *argv[]) {
 
   while (1)
     get_command(dumpsim_file);
-    
+  
 }
 
 /***************************************************************/
@@ -446,7 +446,7 @@ void process_instruction(){
     //add instructions
     else if (opcode == 1) {
         int DR = (current_instruction & 0x0E00) >> 9;
-        int SR1 = (current_instruction & 0x00E0) >> 6;
+        int SR1 = (current_instruction & 0x01C0) >> 6;
         int steer = (current_instruction & 0x20);
         if (steer == 0) {
             //means that this takes SR2
@@ -455,6 +455,9 @@ void process_instruction(){
         }
         else {
             int imm5 = (current_instruction & 0x1F);
+            if (imm5 & 0x10) {
+              imm5 -= 0x10;
+            }
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] + imm5;
         }
         CCsetter(DR);
@@ -462,7 +465,7 @@ void process_instruction(){
     //and instructions
     else if (opcode == 5) {
         int DR = (current_instruction & 0x0E00) >> 9;
-        int SR1 = (current_instruction & 0x00E0) >> 6;
+        int SR1 = (current_instruction & 0x01C0) >> 6;
         int steer = (current_instruction & 0x20);
         if (steer == 0) {
             //means that this takes SR2
@@ -471,6 +474,9 @@ void process_instruction(){
         }
         else {
             int imm5 = (current_instruction & 0x1F);
+            if (imm5 & 0x10) {
+              imm5 -= 0x10;
+            }
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] & imm5;
         }
         CCsetter(DR);
@@ -501,13 +507,13 @@ void process_instruction(){
     // ldb instructions
     else if (opcode == 2) {
         int DR = (current_instruction & 0x0E00) >> 9;
-        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int BaseR = (current_instruction & 0x01C0) >> 6;
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
             boffset6 -= 0x10;
         }
-        int temp = MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][0];
+        int temp = MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][0];
         if (temp & 0x80) {
             // bit 7 is high, sign extend
             temp |= 0xFF00;
@@ -518,13 +524,13 @@ void process_instruction(){
     // ldw instructions
     else if (opcode == 6) {
         int DR = (current_instruction & 0x0E00) >> 9;
-        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int BaseR = (current_instruction & 0x01C0) >> 6;
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
             boffset6 -= 0x10;
         }
-        int temp = (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][1] << 8) | (MEMORY[CURRENT_LATCHES.REGS[BaseR] + boffset6][0]);
+        int temp = (MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][1] << 8) | (MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][0]);
         NEXT_LATCHES.REGS[DR] = temp;
         CCsetter(DR);
     }
@@ -542,13 +548,13 @@ void process_instruction(){
         // NOT part
         if (current_instruction & 0x3F == 0x3F) {
             int DR = (current_instruction & 0x0E00) >> 9;
-            int SR = (current_instruction & 0x00E0) >> 6;
+            int SR = (current_instruction & 0x01C0) >> 6;
             NEXT_LATCHES.REGS[DR] = ~CURRENT_LATCHES.REGS[SR]; // not the value in the SR into DR
             CCsetter(DR);
         }
         else if (current_instruction & 0x20 == 0) {
             int DR = (current_instruction & 0x0E00) >> 9;
-            int SR1 = (current_instruction & 0x00E0) >> 6;
+            int SR1 = (current_instruction & 0x01C0) >> 6;
             int SR2 = (current_instruction & 0x0007);
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ CURRENT_LATCHES.REGS[SR2] ; // XOR the two regs, put into DR
             CCsetter(DR);
@@ -556,8 +562,11 @@ void process_instruction(){
         else if (current_instruction & 0x20) {
             // steering bit is 1
             int DR = (current_instruction & 0x0E00) >> 9;
-            int SR1 = (current_instruction & 0x00E0) >> 6;
+            int SR1 = (current_instruction & 0x01C0) >> 6;
             int imm5 = (current_instruction & 0x001F);
+            if (imm5 & 0x10) {
+              imm5 -= 0x10;
+            }
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ imm5 ; // XOR the SR1 with imm5, put in DR
             CCsetter(DR);
         }
@@ -571,7 +580,7 @@ void process_instruction(){
     // shf instructions
     else if (opcode == 13) {
         int DR = (current_instruction & 0x0E00) >> 9;
-        int SR = (current_instruction & 0x00E0) >> 6;
+        int SR = (current_instruction & 0x01C0) >> 6;
         int steer = (current_instruction & 0x30);
         int amt4 = current_instruction & 0xF;
         if (steer == 0) {
@@ -603,25 +612,25 @@ void process_instruction(){
     // stb instructions
     else if (opcode == 3) {
         int SR = (current_instruction & 0x0E00) >> 9;
-        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int BaseR = (current_instruction & 0x01C0) >> 6;
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
             boffset6 -= 0x10;
         }
-        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)][0] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
+        MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][0] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
     }
     // stw instructions
     else if (opcode == 7) {
         int SR = (current_instruction & 0x0E00) >> 9;
-        int BaseR = (current_instruction & 0x00E0) >> 6;
+        int BaseR = (current_instruction & 0x01C0) >> 6;
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
             boffset6 -= 0x10;
         }
-        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)][0] = CURRENT_LATCHES.REGS[SR] & 0xFF00; // only store the lower 8 bits
-        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)][1] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // store msb at higher address, little endian
+        MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][0] = CURRENT_LATCHES.REGS[SR] & 0xFF00; // only store the lower 8 bits
+        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][1] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // store msb at higher address, little endian
     }
     // trap instructions
     else if (opcode == 15) {

@@ -25,7 +25,12 @@ Result  STB R4, R0, #3 ; 1 -> MEM[x3103]
         STB R3, R0, #2 ; Result -> MEM[x3102]
 
 HALT
-Access .FILL x3100
+
+Access .FILL x302C
 Negative256 .FILL xFF00
+
+
+.ORIG x3100
+.FILL x0505
 
 .END

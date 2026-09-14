@@ -1,0 +1,926 @@
+/*
+	Name 1: Justin Yang
+	Name 2: Manu Vajha
+	UTEID 1: jsy558
+	UTEID 2: mcv925
+*/
+
+
+#include <stdio.h> /* standard input/output library */
+#include <stdlib.h> /* Standard C Library */
+#include <string.h> /* String operations library */
+#include <ctype.h> /* Library for useful character operations */
+#include <limits.h> /* Library for definitions of common variable type characteristics */
+
+FILE* infile = NULL;
+FILE* outfile = NULL;
+
+
+int readAndParse(
+    FILE *pInfile,
+    char *pLine,
+    char **pLabel,
+    char **pOpcode,
+    char **pArg1,
+    char **pArg2,
+    char **pArg3,
+    char **pArg4
+);
+
+int toNum(char *pStr); //Converts string to number
+int isOpcode(char *opcode); //Determines if string is opcode; returns 0 if opcode, -1 if not opcode
+int insert_symbol(const char *name, int address); //Inserts symbol into symbol table; returns -1 if table already contains symbol or if table is full
+int find_symbol(const char *name); //Searches for symbol in symbol table; returns address of symbol, -1 if not found
+void write_symbol_table(FILE *out); // test function so we can see the symbol table generated.
+int register_picker(char *pStr); //takes Rx and returns the x as an int
+//function prototype definitions
+
+#define MAX_LINE_LENGTH 255
+	enum
+	{
+	   DONE, OK, EMPTY_LINE
+	};
+
+// Symbol Table Stuff
+typedef struct {
+    char name[21]; // each name has a max of 20 characters + null terminator
+    int address; // for what mem address it's at
+    int define_check; // if it's been defined yet 
+} Symbol;
+
+#define TABLE_SIZE 1024
+
+Symbol table[TABLE_SIZE]; // initial size, maybe add feature to increase size if running out? idk ignore if we pass all tests
+int symbol_count = 0;
+
+int main(int argc, char* argv[]) {
+    /* open the source file */
+    infile = fopen(argv[1], "r");
+    outfile = fopen(argv[2], "w");
+		 
+    if (!infile) {
+       printf("Error: Cannot open file %s\n", argv[1]);
+       exit(4);
+	}
+    if (!outfile) {
+       printf("Error: Cannot open file %s\n", argv[2]);
+       exit(4);
+    }
+
+    char line[MAX_LINE_LENGTH];
+
+    char *label;
+    char *opcode;
+    char *arg1;
+    char *arg2;
+    char *arg3;
+    char *arg4;
+
+    int status;
+    int locationCounter = 0;
+    int originFound = 0; //check if there's an origin before code
+    int endFound = 0;
+
+    /* Do stuff with files */
+
+    // first pass with assigning symbols
+    while ((status = readAndParse(infile, line, &label, &opcode, &arg1, &arg2, &arg3, &arg4)) != DONE) {
+        if (status == EMPTY_LINE) {
+            continue; // ignore the blanks
+        }
+        if (strcmp(opcode, ".orig") == 0) {
+            int origin;
+            int value = toNum(arg1);
+
+
+			origin = toNum(arg1);
+
+            if (origin < 0 || origin > 0xFFFF) // out of range
+            {
+                exit(1);
+            }
+
+            if (origin % 2 != 0) // not even
+            {
+                exit(1);
+            }
+
+            locationCounter = origin;
+            originFound = 1;
+            
+            continue;
+        }
+
+        if (!originFound) {
+            exit(1); // no origin found
+        }
+
+        if (strcmp(opcode, ".end") == 0) {
+            endFound = 1;
+            break;
+        }
+
+        // now, check for a label
+        if (label[0] != '\0') {
+            if (insert_symbol(label, locationCounter) == -1) {
+                fprintf(stderr, "Error when adding to symbol table:%s %d", label, locationCounter);
+                return(1); // error when adding to symbol table
+            }
+
+        }
+        if (opcode[0] == '\0') {
+            continue; // possible for a line to just have a label, but nothing else so just continue
+        }
+
+        if (isOpcode(opcode) != -1) {
+            if (locationCounter > 0xFFFE) {
+                return(1);
+            }
+            locationCounter += 2;
+        }
+
+        if (strcmp(opcode, ".fill") == 0) {
+            //fill line command
+            int value = toNum(arg1);
+
+            if (value < -32768 || value > 0xFFFF) {
+                fprintf(stderr, "Value is out of bounds: %d\n", value);
+                return (1); // out of bounds
+            }
+            if (locationCounter > 0xFFFE) {
+                fprintf(stderr, "Location is out of bounds: %d\n", locationCounter);
+                return (1); // idk how but the user manages to put the fill command out of memory
+            }
+            locationCounter +=2; // increment
+        }
+    }    
+    //printf("About to write %d symbols\n", symbol_count);
+    //write_symbol_table(outfile);
+    
+    rewind(infile); // reset to beginning of file so we can do second pass
+    //reset these
+    locationCounter = 0;
+    originFound = 0; 
+    endFound = 0;
+
+
+    while ((status = readAndParse(infile, line, &label, &opcode, &arg1, &arg2, &arg3, &arg4)) != DONE) {
+        if (status == EMPTY_LINE) {
+            continue; // ignore the blank, save some time
+        }
+        if (strcmp(opcode, ".end") == 0) {
+            endFound = 1;
+            break;
+        }
+        if (strcmp(opcode, ".orig") == 0) {
+            locationCounter = toNum(arg1); // set location
+            fprintf(outfile, "0x%04X\n", (unsigned int)locationCounter); // just print the orig value
+            continue; // next line
+        }
+        if (strcmp(opcode, ".fill") == 0) {
+            int val = toNum(arg1);
+            fprintf(outfile, "0x%04X\n", (unsigned int)val & 0xFFFFu);
+            locationCounter += 2; // increment PC by 2
+        }
+        if (strcmp(opcode, "add") == 0) { // 0001 dr1 sr1 steer bit sr2/imm5
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 12; // 0001 at beginning
+            binary_code |= (register_picker(arg1)) << 9;
+            binary_code |= (register_picker(arg2)) << 6;
+            if (register_picker(arg3) == -1) { //imm5
+                binary_code |= 1 << 5; // steering bit
+                binary_code |= 0x0000001F & toNum(arg3); // whatever the imm5 is
+            }
+            else {
+                binary_code |= register_picker(arg3);
+            }
+            //fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue; // next line
+        }
+        if (strcmp(opcode, "and") == 0) { // 0001 dr1 sr1 steer bit sr2/imm5 
+            // code pretty similar to add so i just reused and changed op code shift
+            unsigned int binary_code = 0;
+            binary_code |= 5 << 12; // 0101 at beginning
+            binary_code |= (register_picker(arg1)) << 9;
+            binary_code |= (register_picker(arg2)) << 6;
+            if (register_picker(arg3) == -1) { //imm5
+                binary_code |= 1 << 5; // steering bit
+                binary_code |= 0x0000001F & toNum(arg3); // whatever the imm5 is
+            }
+            else {
+                binary_code |= register_picker(arg3);
+            }
+            //fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue; // next line
+        }
+        if (strcmp(opcode, "br") == 0) {
+            unsigned int binary_code = 7<<9; //Lab doc says BR is treated as BRnzp
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference /2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brn") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 11;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brz") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 10;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brp") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 9;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+			}
+			//fully in binary at this point, turn into hex
+            fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brnz") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 11;
+            binary_code |= 1 << 10;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+    		}
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brzp") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 10;
+            binary_code |= 1 << 9;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brnp") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 11;
+            binary_code |= 1 << 9;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+        if (strcmp(opcode, "brnzp") == 0) {
+            unsigned int binary_code = 0;
+            binary_code |= 1 << 11;
+            binary_code |= 1 << 10;
+            binary_code |= 1 << 9;
+            if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x000001FF; // remove the high bits which shouldn't even be there
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+            locationCounter += 2;
+            continue;
+        }
+		if(strcmp(opcode, "halt") == 0) {
+			fprintf(outfile, "0xF025\n");
+			locationCounter += 2;
+			continue;
+    	}
+		if(strcmp(opcode, "jmp") == 0) { //1100 000 BaseR 000000
+			unsigned int binary_code = 96<<9;
+			binary_code |= register_picker(arg1) << 6;
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "jsr") == 0) { //0100 1 PCOffset11
+			unsigned int binary_code = 9<<11;
+			if (arg1[0] == '#' || arg1[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg1);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg1);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x07FF; // mask last 11 bits
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "jsrr") == 0) { //0100 0 00 BaseR 000000
+			unsigned int binary_code = 32<<9;
+			binary_code |= register_picker(arg1) << 6;
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "ldb") == 0) { //0010 DR BaseR boffset6
+			unsigned int binary_code = 2 << 12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Load offset out of range: %s\n", arg3);
+                exit(4);
+            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
+
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "ldw") == 0) { //0110 DR BaseR offset6
+			unsigned int binary_code = 6 << 12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Load offset out of range: %s\n", arg3);
+                exit(4);
+            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "lea") == 0) { //1110 DR PCoffset9
+			unsigned int binary_code = 14<<12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			if (arg2[0] == '#' || arg2[0] == 'x') { //zero, which means that it is not alphabet, so a direct offset
+                int offset = toNum(arg2);
+                binary_code |= offset;
+            }
+            else {
+                int address = find_symbol(arg2);
+                if (address == -1) {
+                    //invalid symbol
+                    exit(EXIT_FAILURE); // invalid symbol
+                }
+                int difference = address - (locationCounter + 2); // if address is bigger, positive offset, otherwise negative
+                difference = difference / 2;
+                difference &= 0x01FF;
+                binary_code |= difference;
+            }
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "nop") == 0) {
+			fprintf(outfile, "0x0000\n");
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "not") == 0) { //1001 DR SR 1 11111
+			unsigned int binary_code = 0x903F;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "ret") == 0) {
+			fprintf(outfile, "0xC1C0\n");
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "lshf") == 0) { //1101 DR SR 00 amount4
+			unsigned int binary_code = 13<<12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= 0x0000000F & toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "rshfl") == 0) { //1101 DR SR 01 amount4
+			unsigned int binary_code = 0xD010;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= 0x0000000F & toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "rshfa") == 0) { //1101 DR SR 11 amount4
+			unsigned int binary_code = 0xD030;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+			binary_code |= 0x0000000F & toNum(arg3);
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "rti") == 0) {
+			fprintf(outfile, "0x8000\n");
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "stb") == 0) { //0011 SR BaseR boffset6
+			unsigned int binary_code = 3<<12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Store offset out of range: %s\n", arg3);
+                exit(4);
+            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "stw") == 0) { //0111 SR BaseR offset6
+			unsigned int binary_code = 7<<12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9;
+			binary_code |= register_picker(arg2) << 6;
+            int offset = toNum(arg3);
+
+            if (offset < -32 || offset > 31) {
+                fprintf(stderr, "Store offset out of range: %s\n", arg3);
+                exit(4);
+            }
+
+            binary_code |= (unsigned int)offset & 0x3Fu;
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "trap") == 0) { //1111 0000 trapvect8
+			unsigned int binary_code = 0xF000;
+            int temp = toNum(arg1);
+			binary_code |= 0xFF & temp; // Lshift 1
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter += 2;
+			continue;
+		}
+		if(strcmp(opcode, "xor") == 0) { //1001 DR SR steer-bit SR2/imm5
+			unsigned int binary_code = 9 << 12;
+			int dr = register_picker(arg1);
+            if (dr == -1) {
+                fprintf(stderr, "Invalid register: %s\n", arg1);
+                exit(4);
+            }
+            binary_code |= (unsigned int)dr << 9; //dr
+			binary_code |= register_picker(arg2) << 6; // sr1
+			
+			if(register_picker(arg3) == -1) { //check if third is SR2 or imm5
+				binary_code |= 1<<5;
+				binary_code |= toNum(arg3) & 0x1F;
+			 }
+			else {
+				binary_code |= 0x1F & register_picker(arg3);
+			}
+
+			//fully in binary at this point, turn into hex
+			fprintf(outfile, "0x%04X\n", binary_code);
+			locationCounter +=2;
+			continue;
+		}
+	}
+
+	/* Done doing stuff with files */
+
+    fclose(infile);
+    fclose(outfile);
+}
+
+
+int readAndParse(
+    FILE *pInfile, // pointer for in file
+    char *pLine, // pointer for what line we are on
+    char **pLabel, //pointer for the label, if it exists
+    char **pOpcode, //pointer for the op code
+    char **pArg1, 
+    char **pArg2, 
+    char **pArg3,
+    char **pArg4
+    ) 
+    {
+	   char * lRet, * lPtr;
+	   int i;
+	   if(!fgets( pLine, MAX_LINE_LENGTH, pInfile))
+		return( DONE );
+	   for( i = 0; i < strlen( pLine ); i++ )
+		pLine[i] = tolower( pLine[i] );
+	   
+           /* convert entire line to lowercase */
+	   *pLabel = *pOpcode = *pArg1 = *pArg2 = *pArg3 = *pArg4 = pLine + strlen(pLine);
+
+	   /* ignore the comments */
+	   lPtr = pLine;
+
+	   while( *lPtr != ';' && *lPtr != '\0' &&
+	   *lPtr != '\n' ) 
+		lPtr++;
+
+	   *lPtr = '\0';
+	   if( !(lPtr = strtok( pLine, "\t\n ," ) ) ) 
+		return( EMPTY_LINE );
+
+	   if( isOpcode( lPtr ) == -1 && lPtr[0] != '.' ) /* found a label */
+	   {
+		*pLabel = lPtr;
+	    if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
+	   }
+	   
+           *pOpcode = lPtr;
+
+	   if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
+	   
+           *pArg1 = lPtr;
+	   
+           if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
+
+	   *pArg2 = lPtr;
+	   if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
+
+	   *pArg3 = lPtr;
+
+	   if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
+
+	   *pArg4 = lPtr;
+
+	   return( OK );
+	}
+
+	/* Note: MAX_LINE_LENGTH, OK, EMPTY_LINE, and DONE are defined values */
+
+    // basically splits up the line of the code into tokens, isOpCode can output a -1, which would indicate
+    // not a real instruction. Or if first char is a dot, indicates pseudocode.
+
+
+
+int toNum(char * pStr)
+{
+   char * t_ptr;
+   char * orig_pStr;
+   int t_length,k;
+   int lNum, lNeg = 0;
+   long int lNumLong;
+
+   orig_pStr = pStr;
+   if( *pStr == '#' )				/* decimal */
+   { 
+     pStr++;
+     if( *pStr == '-' )				/* dec is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isdigit(*t_ptr))
+       {
+	 printf("Error: invalid decimal operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNum = atoi(pStr);
+     if (lNeg)
+       lNum = -lNum;
+ 
+     return lNum;
+   }
+   else if( *pStr == 'x' )	/* hex     */
+   {
+     pStr++;
+     if( *pStr == '-' )				/* hex is negative */
+     {
+       lNeg = 1;
+       pStr++;
+     }
+     t_ptr = pStr;
+     t_length = strlen(t_ptr);
+     for(k=0;k < t_length;k++)
+     {
+       if (!isxdigit(*t_ptr))
+       {
+	 printf("Error: invalid hex operand, %s\n",orig_pStr);
+	 exit(4);
+       }
+       t_ptr++;
+     }
+     lNumLong = strtol(pStr, NULL, 16);    /* convert hex string into integer */
+     lNum = (lNumLong > INT_MAX)? INT_MAX : lNumLong;
+     if( lNeg )
+       lNum = -lNum;
+     return lNum;
+   }
+   else
+   {
+	printf( "Error: invalid operand, %s\n", orig_pStr);
+	exit(4);  /* This has been changed from error code 3 to error code 4, see clarification 12 */
+   }
+}
+
+int insert_symbol(const char* name, int address) { 
+    // check if name is too long first
+    char checked_name[21];
+    if (strlen(name) > 20) {
+        //error, truncate it
+        strncpy (checked_name, name, 20);
+    }
+    else {
+        strcpy (checked_name, name);
+    }
+    
+    for (int i = 0; i < symbol_count; i++) {
+        if (strcmp(table[i].name, checked_name) == 0) {
+            fprintf(stderr, "%s already exists in table\n", checked_name);
+            return -1; //that means this symbol already exists in the table, can't have dupes
+        } 
+    }
+    if (symbol_count >= TABLE_SIZE) {
+        fprintf(stderr, "symbol table is full!\n");
+        return -1; //table is full
+    }
+    strcpy(table[symbol_count].name, checked_name);
+    table[symbol_count].address = address;
+    table[symbol_count].define_check = 1;
+    symbol_count++; // assigning all the fields
+    return 0;
+}
+
+int find_symbol(const char* name) {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (strcmp(name, table[i].name) == 0) {
+            return table[i].address;
+        }
+    }
+    fprintf(stderr, "symbol not found!\n");
+    fprintf(stderr, "%s\n", name);
+    return -1;
+
+}
+
+int assign_symbols(char **pLabel, int address) {
+    if (*pLabel == NULL) return -1;
+    if (insert_symbol(*pLabel, address) == -1) {
+        fprintf(stderr, "Error while insertion!\n");
+        return -1; // threw some sort of error while inserting
+        
+    }
+    return 0;
+}
+
+int isOpcode(char *opcode) {
+    //fprintf(stderr, "%s\n", opcode);
+    const char *opcodes[] = {
+        "add", "and", "br", "brn", "brz", "brp",
+        "brnz", "brnp", "brzp", "brnzp",
+        "halt", "jmp", "jsr", "jsrr",
+        "ldb", "ldw", "lea", "nop", "not", "ret",
+        "lshf", "rshfl", "rshfa", "rti",
+        "stb", "stw", "trap", "xor"
+    };
+
+	int opcodeNums[] = {
+		1<<12, 5<<12, 7<<9, 4<<9, 2<<9, 1<<9,
+		6<<9, 5<<9, 3<<9, 7<<9,
+		0xF025, 96<<9, 9<<11, 32<<9,
+		2<<12, 6<<12, 14<<12, 0, 9<<12, 0xC1C0,
+		13<<12, 13<<12, 13<<12, 0x8000,
+		3<<12, 7<<12, 0xF0<<8, 9<<12
+	};
+
+    for (int i = 0; i < sizeof(opcodes) / sizeof(char*); i++) {
+        if (strcmp(opcodes[i], opcode) == 0) {
+            //fprintf(stderr, "success!\n");
+            return 0;
+        }
+    }
+    return -1;
+}
+
+// temporary testing function for the symbol table, running old LC3 labs here.
+void write_symbol_table(FILE *out)
+{
+    fprintf(out, "Label                 Address\n");
+    fprintf(out, "--------------------  -------\n");
+
+    for (int i = 0; i < symbol_count; i++)
+    {
+        fprintf(
+            out,
+            "%-20s  x%04X\n",
+            table[i].name,
+            table[i].address & 0xFFFF
+        );
+    }
+}
+
+
+int register_picker(char *Rx) { // takes in an arg, and if it's not a register, returns -1, else, returns the number of the register
+    if (strlen(Rx) != 2 || Rx[0] != 'r' || Rx[1] < '0' || Rx[1] > '7') { // invalid
+        return -1; 
+    }
+    return Rx[1] - '0';
+}
+
