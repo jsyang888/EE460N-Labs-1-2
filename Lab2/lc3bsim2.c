@@ -414,7 +414,7 @@ void process_instruction(){
    */
 
     int current_instruction = 0;
-    current_instruction = Low16bits(MEMORY[CURRENT_LATCHES.PC/2][0] << 8 | MEMORY[CURRENT_LATCHES.PC/2][1]);
+    current_instruction = Low16bits(MEMORY[CURRENT_LATCHES.PC/2][0] | MEMORY[CURRENT_LATCHES.PC/2][1] << 8);
     NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2; //increment PC now
 
     int opcode = (current_instruction & 0xF000) >> 12; // after keeping only instruction bits, shift into 0-3
