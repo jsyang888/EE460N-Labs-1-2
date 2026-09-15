@@ -441,7 +441,7 @@ void process_instruction(){
         int takeBranch = ((CCbits & 4) && CURRENT_LATCHES.N) || ((CCbits & 2) && CURRENT_LATCHES.Z) || ((CCbits & 1) && CURRENT_LATCHES.P);
         if (takeBranch) {
         NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + PCoffset9 * 2);
-}
+        }
     }
     //add instructions
     else if (opcode == 1) {
@@ -451,12 +451,12 @@ void process_instruction(){
         if (steer == 0) {
             //means that this takes SR2
             int SR2 = (current_instruction & 0x07);
-            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] + CURRENT_LATCHES.REGS[SR2];
+            NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + CURRENT_LATCHES.REGS[SR2]);
         }
         else {
             int imm5 = (current_instruction & 0x1F);
             if (imm5 & 0x10) {
-              imm5 -= 0x10;
+              imm5 -= 0x20;
             }
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] + imm5;
         }
@@ -475,7 +475,7 @@ void process_instruction(){
         else {
             int imm5 = (current_instruction & 0x1F);
             if (imm5 & 0x10) {
-              imm5 -= 0x10;
+              imm5 -= 0x20;
             }
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] & imm5;
         }
@@ -511,9 +511,9 @@ void process_instruction(){
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
-            boffset6 -= 0x10;
+            boffset6 -= 0x40;
         }
-        int temp = MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][0];
+        int temp = MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][boffset6%2];
         if (temp & 0x80) {
             // bit 7 is high, sign extend
             temp |= 0xFF00;
@@ -528,7 +528,7 @@ void process_instruction(){
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
-            boffset6 -= 0x10;
+            boffset6 -= 0x40;
         }
         int temp = (MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][1] << 8) | (MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][0]);
         NEXT_LATCHES.REGS[DR] = temp;
@@ -565,7 +565,7 @@ void process_instruction(){
             int SR1 = (current_instruction & 0x01C0) >> 6;
             int imm5 = (current_instruction & 0x001F);
             if (imm5 & 0x10) {
-              imm5 -= 0x10;
+              imm5 -= 0x20;
             }
             NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ imm5 ; // XOR the SR1 with imm5, put in DR
             CCsetter(DR);
@@ -616,9 +616,9 @@ void process_instruction(){
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
-            boffset6 -= 0x10;
+            boffset6 -= 0x40;
         }
-        MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][0] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
+        MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][boffset6%2] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
     }
     // stw instructions
     else if (opcode == 7) {
@@ -627,7 +627,7 @@ void process_instruction(){
         int boffset6 = (current_instruction & 0x3F);
         if (boffset6 & 0x20) {
             //negative
-            boffset6 -= 0x10;
+            boffset6 -= 0x40;
         }
         MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][0] = CURRENT_LATCHES.REGS[SR] & 0xFF00; // only store the lower 8 bits
         MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][1] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // store msb at higher address, little endian
@@ -644,19 +644,23 @@ void process_instruction(){
 
 // helper function to set CC bits based on value of the DR
 void CCsetter(int DR) {
-    if (NEXT_LATCHES.REGS[DR] > 0) {
+  int temp = NEXT_LATCHES.REGS[DR];
+  if (temp & 0x8000) { // negative, so we need to sub it into being negative
+    temp -= 0x10000; // make negative
+  }
+    if (temp > 0) {
         // positive
         NEXT_LATCHES.N = 0;
         NEXT_LATCHES.Z = 0;
         NEXT_LATCHES.P = 1;
     }
-    else if (NEXT_LATCHES.REGS[DR] == 0) {
+    else if (temp == 0) {
         // zero
         NEXT_LATCHES.N = 0;
         NEXT_LATCHES.Z = 1;
         NEXT_LATCHES.P = 0;
     }
-    else if (NEXT_LATCHES.REGS[DR] < 0) {
+    else {
         // negative
         NEXT_LATCHES.N = 1;
         NEXT_LATCHES.Z = 0;

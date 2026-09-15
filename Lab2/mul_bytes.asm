@@ -31,6 +31,6 @@ Negative256 .FILL xFF00
 
 
 .ORIG x3100
-.FILL x0505
+.FILL x1010
 
 .END
