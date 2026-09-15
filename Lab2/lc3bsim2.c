@@ -458,7 +458,7 @@ void process_instruction(){
             if (imm5 & 0x10) {
               imm5 -= 0x20;
             }
-            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] + imm5;
+            NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + imm5);
         }
         CCsetter(DR);
     }
