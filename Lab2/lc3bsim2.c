@@ -484,7 +484,7 @@ void process_instruction(){
     //jmp instructions
     else if (opcode == 12) {
         int BaseR = (current_instruction & 0x1C0) >> 6;
-        NEXT_LATCHES.PC = Low16bits(MEMORY[CURRENT_LATCHES.REGS[BaseR]][1] << 8 | MEMORY[CURRENT_LATCHES.REGS[BaseR]][0]); // jump to baseR value 
+        NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR]; // jump to baseR value 
     }
     //jsr / r instructions 
     // NOT SURE ABOUT THIS ONE CHECK LAB2 DOC
@@ -495,13 +495,14 @@ void process_instruction(){
             if (PCoffset11 & 0x0400) { // first bit is one, make negative
                 PCoffset11 -= 0x800;
             }
-            NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + PCoffset11);
+            NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC; // save next PC value to R7 of next state
+            NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + (PCoffset11 << 1));
         }
         else {
             // jsrr in this case
             int BaseR = (current_instruction & 0x1C0) >> 6;
-            NEXT_LATCHES.REGS[7] = CURRENT_LATCHES.PC; // save next PC value to R7 of next state
-            NEXT_LATCHES.PC = Low16bits(MEMORY[CURRENT_LATCHES.REGS[BaseR]][1] << 8 | MEMORY[CURRENT_LATCHES.REGS[BaseR]][0]); // jump to baseR value 
+            NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC; // save next PC value to R7 of next state
+            NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR]; // jump to baseR value 
         }
     }
     // ldb instructions
@@ -543,20 +544,20 @@ void process_instruction(){
         }
         NEXT_LATCHES.REGS[DR] = Low16bits(NEXT_LATCHES.PC + (PCoffset9 << 1)); // set DR to address of offset
     }
-    // not instructions / XOR
+    // not instructions / xor
     else if (opcode == 9) {
         // NOT part
         if (current_instruction & 0x3F == 0x3F) {
             int DR = (current_instruction & 0x0E00) >> 9;
             int SR = (current_instruction & 0x01C0) >> 6;
-            NEXT_LATCHES.REGS[DR] = ~CURRENT_LATCHES.REGS[SR]; // not the value in the SR into DR
+            NEXT_LATCHES.REGS[DR] = Low16bits(~CURRENT_LATCHES.REGS[SR]); // not the value in the SR into DR
             CCsetter(DR);
         }
         else if (current_instruction & 0x20 == 0) {
             int DR = (current_instruction & 0x0E00) >> 9;
             int SR1 = (current_instruction & 0x01C0) >> 6;
             int SR2 = (current_instruction & 0x0007);
-            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ CURRENT_LATCHES.REGS[SR2] ; // XOR the two regs, put into DR
+            NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] ^ CURRENT_LATCHES.REGS[SR2]) ; // XOR the two regs, put into DR
             CCsetter(DR);
         }
         else if (current_instruction & 0x20) {
@@ -567,30 +568,26 @@ void process_instruction(){
             if (imm5 & 0x10) {
               imm5 -= 0x20;
             }
-            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR1] ^ imm5 ; // XOR the SR1 with imm5, put in DR
+            NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] ^ imm5) ; // XOR the SR1 with imm5, put in DR
             CCsetter(DR);
         }
         
-    }
-    // ret instructions
-    else if (opcode == 12) {
-        NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7]; // set PC = R7
     }
     // rti SKIP DO NOT NEED TO IMPLEMENT
     // shf instructions
     else if (opcode == 13) {
         int DR = (current_instruction & 0x0E00) >> 9;
         int SR = (current_instruction & 0x01C0) >> 6;
-        int steer = (current_instruction & 0x30);
+        int steer = (current_instruction & 0x30) >> 4;
         int amt4 = current_instruction & 0xF;
         if (steer == 0) {
             //LSHF
-            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR] << amt4; 
+            NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] << amt4); 
             CCsetter(DR);
         }
         else if (steer == 1) {
             //RSHFL
-            NEXT_LATCHES.REGS[DR] = CURRENT_LATCHES.REGS[SR] >> amt4;
+            NEXT_LATCHES.REGS[DR] = (CURRENT_LATCHES.REGS[SR] & 0xFFFF) >> amt4;
             CCsetter(DR);
         }
         else if (steer == 3 ) {
@@ -600,7 +597,7 @@ void process_instruction(){
             if (CURRENT_LATCHES.REGS[SR] & 0x8000) {
                 // if bit 15 is 1:
                 for (int i = 0; i < amt4; i++) {
-                    temp |= 1 << (15-amt4); // i think this shifts 1s to the front for however many times
+                    temp |= 1 << (15-i); // i think this shifts 1s to the front for however many times
                     // it's shifted over
                 }
             }
