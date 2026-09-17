@@ -418,7 +418,7 @@ void process_instruction(){
     NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2; //increment PC now
 
     int opcode = (current_instruction & 0xF000) >> 12; // after keeping only instruction bits, shift into 0-3
-    if (opcode == 10 || opcode == 11) { //not opcodes in LC3b
+    if ((opcode == 10) || (opcode == 11)) { //not opcodes in LC3b
         // invalid opcode
         exit;
     }
@@ -438,7 +438,7 @@ void process_instruction(){
             PCoffset9 -= 0x200;  
         }
 
-        int takeBranch = ((CCbits & 4) && CURRENT_LATCHES.N) || ((CCbits & 2) && CURRENT_LATCHES.Z) || ((CCbits & 1) && CURRENT_LATCHES.P);
+        int takeBranch = (((CCbits & 4) && CURRENT_LATCHES.N) || ((CCbits & 2) && CURRENT_LATCHES.Z) || ((CCbits & 1) && CURRENT_LATCHES.P));
         if (takeBranch) {
         NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + PCoffset9 * 2);
         }
@@ -547,13 +547,13 @@ void process_instruction(){
     // not instructions / xor
     else if (opcode == 9) {
         // NOT part
-        if (current_instruction & 0x3F == 0x3F) {
+        if ((current_instruction & 0x3F) == 0x3F) {
             int DR = (current_instruction & 0x0E00) >> 9;
             int SR = (current_instruction & 0x01C0) >> 6;
             NEXT_LATCHES.REGS[DR] = Low16bits(~CURRENT_LATCHES.REGS[SR]); // not the value in the SR into DR
             CCsetter(DR);
         }
-        else if (current_instruction & 0x20 == 0) {
+        else if ((current_instruction & 0x20) == 0) {
             int DR = (current_instruction & 0x0E00) >> 9;
             int SR1 = (current_instruction & 0x01C0) >> 6;
             int SR2 = (current_instruction & 0x0007);
