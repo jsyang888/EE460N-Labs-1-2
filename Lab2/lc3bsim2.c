@@ -420,7 +420,7 @@ void process_instruction(){
     int opcode = (current_instruction & 0xF000) >> 12; // after keeping only instruction bits, shift into 0-3
     if ((opcode == 10) || (opcode == 11)) { //not opcodes in LC3b
         // invalid opcode
-        exit;
+        exit(-1); 
     }
     for (int i = 0; i < LC_3b_REGS; i++) {
         NEXT_LATCHES.REGS[i] = CURRENT_LATCHES.REGS[i]; // set it all now, can overwrite later if have to
@@ -496,7 +496,7 @@ void process_instruction(){
                 PCoffset11 -= 0x800;
             }
             NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC; // save next PC value to R7 of next state
-            NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + (PCoffset11 << 1));
+            NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + (PCoffset11 * 2));
         }
         else {
             // jsrr in this case
@@ -514,7 +514,9 @@ void process_instruction(){
             //negative
             boffset6 -= 0x40;
         }
-        int temp = MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][boffset6%2];
+        int address = Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6);
+        int byte = address & 1;
+        int temp = MEMORY[address/2][byte];
         if (temp & 0x80) {
             // bit 7 is high, sign extend
             temp |= 0xFF00;
@@ -531,7 +533,8 @@ void process_instruction(){
             //negative
             boffset6 -= 0x40;
         }
-        int temp = (MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][1] << 8) | (MEMORY[(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][0]);
+        int address = Low16bits(CURRENT_LATCHES.REGS[BaseR] + 2 * boffset6);
+        int temp = (MEMORY[address/2][1] << 8) | (MEMORY[address/2][0]);
         NEXT_LATCHES.REGS[DR] = temp;
         CCsetter(DR);
     }
@@ -542,7 +545,7 @@ void process_instruction(){
         if (PCoffset9 & 0x100) {  // convert to negative if bit 8 is 1
             PCoffset9 -= 0x200;  
         }
-        NEXT_LATCHES.REGS[DR] = Low16bits(NEXT_LATCHES.PC + (PCoffset9 << 1)); // set DR to address of offset
+        NEXT_LATCHES.REGS[DR] = Low16bits(NEXT_LATCHES.PC + (PCoffset9 * 2)); // set DR to address of offset
     }
     // not instructions / xor
     else if (opcode == 9) {
@@ -615,7 +618,9 @@ void process_instruction(){
             //negative
             boffset6 -= 0x40;
         }
-        MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][boffset6%2] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
+        int address = Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6);
+        int byte = address & 1; // computes whether it's in index 0 or 1
+        MEMORY[address/2][byte] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // only store the lower 8 bits
     }
     // stw instructions
     else if (opcode == 7) {
@@ -626,8 +631,9 @@ void process_instruction(){
             //negative
             boffset6 -= 0x40;
         }
-        MEMORY[(Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6))/2][0] = CURRENT_LATCHES.REGS[SR] & 0xFF00; // only store the lower 8 bits
-        MEMORY[Low16bits(CURRENT_LATCHES.REGS[BaseR] + boffset6)/2][1] = CURRENT_LATCHES.REGS[SR] & 0x00FF; // store msb at higher address, little endian
+        int address = Low16bits(CURRENT_LATCHES.REGS[BaseR] + 2 * boffset6);
+        MEMORY[address/2][0] = CURRENT_LATCHES.REGS[SR] & 0xFF; // only store the lower 8 bits
+        MEMORY[address/2][1] = (CURRENT_LATCHES.REGS[SR] >> 8) & 0xFF; // store msb at higher address, little endian
     }
     // trap instructions
     else if (opcode == 15) {
